@@ -1,6 +1,6 @@
-import { Schema, model, models, type InferSchemaType, type Model } from "mongoose";
+import { Schema, type InferSchemaType } from "mongoose";
 import { TX_TYPES } from "@/lib/domain";
-import { moneyField, noteField } from "./_shared";
+import { defineModel, moneyField, noteField } from "./_shared";
 
 /** Har oy belgilangan kunda avtomatik qo'shiladigan to'lov (ijara, internet, obuna...) */
 const recurringSchema = new Schema(
@@ -21,5 +21,4 @@ const recurringSchema = new Schema(
 );
 
 export type RecurringDoc = InferSchemaType<typeof recurringSchema>;
-export const Recurring =
-  (models.Recurring as Model<RecurringDoc>) ?? model("Recurring", recurringSchema);
+export const Recurring = defineModel("Recurring", recurringSchema);

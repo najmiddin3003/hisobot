@@ -1,5 +1,6 @@
-import { Schema, model, models, type InferSchemaType, type Model } from "mongoose";
+import { Schema, type InferSchemaType } from "mongoose";
 import { WALLET_KINDS } from "@/lib/domain";
+import { defineModel } from "./_shared";
 
 const walletSchema = new Schema(
   {
@@ -20,4 +21,4 @@ const walletSchema = new Schema(
 );
 
 export type WalletDoc = InferSchemaType<typeof walletSchema>;
-export const Wallet = (models.Wallet as Model<WalletDoc>) ?? model("Wallet", walletSchema);
+export const Wallet = defineModel("Wallet", walletSchema);

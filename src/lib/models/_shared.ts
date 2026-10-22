@@ -1,4 +1,22 @@
+import mongoose, { type Schema } from "mongoose";
 import { SOURCES } from "@/lib/domain";
+
+function createModel<TSchema extends Schema>(name: string, schema: TSchema) {
+  return mongoose.model(name, schema);
+}
+
+/**
+ * Model yaratadi. Dev rejimida (hot reload) sxema o'zgarsa, eski model keshda
+ * qolib ketmasligi uchun qayta ro'yxatdan o'tkaziladi — aks holda yangi maydonlar saqlanmaydi.
+ */
+export function defineModel<TSchema extends Schema>(name: string, schema: TSchema) {
+  const existing = mongoose.models[name];
+  if (existing && process.env.NODE_ENV === "production") {
+    return existing as ReturnType<typeof createModel<TSchema>>;
+  }
+  if (existing) mongoose.deleteModel(name);
+  return createModel(name, schema);
+}
 
 /** Summalar so'mda, butun son sifatida saqlanadi */
 export const moneyField = {

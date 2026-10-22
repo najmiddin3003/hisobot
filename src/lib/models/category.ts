@@ -1,5 +1,6 @@
-import { Schema, model, models, type InferSchemaType, type Model } from "mongoose";
+import { Schema, type InferSchemaType } from "mongoose";
 import { SYSTEM_CATEGORY_KEYS, TX_TYPES } from "@/lib/domain";
+import { defineModel } from "./_shared";
 
 const categorySchema = new Schema(
   {
@@ -23,5 +24,4 @@ categorySchema.index(
 categorySchema.index({ type: 1, archived: 1, order: 1 });
 
 export type CategoryDoc = InferSchemaType<typeof categorySchema>;
-export const Category =
-  (models.Category as Model<CategoryDoc>) ?? model("Category", categorySchema);
+export const Category = defineModel("Category", categorySchema);

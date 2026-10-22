@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
-import { connection } from "next/server";
+import { io } from "next/cache";
 import { History, PieChart, Scale, Sparkles, TrendingDown, TrendingUp, Wallet, ChartColumn } from "lucide-react";
 import { ComingSoon } from "@/components/coming-soon";
 import { PageHeader } from "@/components/page-header";
@@ -57,7 +57,7 @@ export default function DashboardPage({ searchParams }: PageProps<"/">) {
 async function MonthSummary({ searchParams }: Pick<PageProps<"/">, "searchParams">) {
   const { oy } = await searchParams;
   // Joriy oy so'rov vaqtiga qarab aniqlanadi — prerender'da emas
-  await connection();
+  await io();
   const month = resolveMonthParam(oy);
   const compareHint = `${monthLabel(shiftMonth(month, -1))} bilan taqqoslash`;
 

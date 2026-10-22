@@ -38,7 +38,8 @@ function NavLinks({ items, activeHref }: { items: NavItem[]; activeHref?: string
   );
 }
 
-export function AppSidebar() {
+/** userMenu — serverda seansdan o'qiladigan foydalanuvchi menyusi (Suspense ichida) */
+export function AppSidebar({ userMenu }: { userMenu: React.ReactNode }) {
   const activeHref = findNavItem(usePathname())?.href;
 
   return (
@@ -78,6 +79,7 @@ export function AppSidebar() {
 
       <SidebarFooter>
         <NavLinks items={[SETTINGS_NAV]} activeHref={activeHref} />
+        {userMenu}
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>

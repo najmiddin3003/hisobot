@@ -1,11 +1,11 @@
 import "server-only";
-import { connection } from "next/server";
+import { requireUser } from "@/lib/auth/dal";
 import { connectDB } from "@/lib/db";
 import { Category, User, Wallet } from "@/lib/models";
 
 export async function getSettingsOverview() {
-  // Baza har doim so'rov paytida o'qiladi (build vaqtida emas)
-  await connection();
+  // Seans cookie'si o'qilgani uchun baza har doim so'rov paytida o'qiladi (build vaqtida emas)
+  await requireUser();
   await connectDB();
 
   const [wallets, categories, userCount] = await Promise.all([

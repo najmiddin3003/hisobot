@@ -47,3 +47,24 @@ export type SystemCategoryKey = (typeof SYSTEM_CATEGORY_KEYS)[number];
 
 export const SESSION_CHANNELS = ["web", "telegram"] as const;
 export type SessionChannel = (typeof SESSION_CHANNELS)[number];
+
+export const SESSION_STATUSES = ["pending", "active"] as const;
+export type SessionStatus = (typeof SESSION_STATUSES)[number];
+
+/** Seans nima sababdan yopilgani */
+export const REVOKE_REASONS = [
+  "new_login",
+  "logout",
+  "manual",
+  "password_changed",
+  "two_factor_reset",
+] as const;
+export type RevokeReason = (typeof REVOKE_REASONS)[number];
+
+export const REVOKE_REASON_LABELS: Record<RevokeReason, string> = {
+  new_login: "Boshqa qurilmadan kirildi",
+  logout: "Chiqib ketildi",
+  manual: "Qo'lda yopildi",
+  password_changed: "Parol o'zgartirildi",
+  two_factor_reset: "2FA qayta o'rnatildi",
+};

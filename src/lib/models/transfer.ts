@@ -1,5 +1,5 @@
-import { Schema, model, models, type InferSchemaType, type Model } from "mongoose";
-import { deletedAtField, moneyField, noteField, sourceField } from "./_shared";
+import { Schema, type InferSchemaType } from "mongoose";
+import { defineModel, deletedAtField, moneyField, noteField, sourceField } from "./_shared";
 
 /** Hamyonlar o'rtasidagi o'tkazma: kirim ham, chiqim ham hisoblanmaydi, faqat qoldiqlar o'zgaradi */
 const transferSchema = new Schema(
@@ -18,5 +18,4 @@ const transferSchema = new Schema(
 transferSchema.index({ deletedAt: 1, occurredAt: -1 });
 
 export type TransferDoc = InferSchemaType<typeof transferSchema>;
-export const Transfer =
-  (models.Transfer as Model<TransferDoc>) ?? model("Transfer", transferSchema);
+export const Transfer = defineModel("Transfer", transferSchema);

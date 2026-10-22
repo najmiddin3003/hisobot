@@ -1,6 +1,6 @@
-import { Schema, model, models, type InferSchemaType, type Model } from "mongoose";
+import { Schema, type InferSchemaType } from "mongoose";
 import { DEBT_ROLES, TX_TYPES } from "@/lib/domain";
-import { deletedAtField, moneyField, noteField, sourceField } from "./_shared";
+import { defineModel, deletedAtField, moneyField, noteField, sourceField } from "./_shared";
 
 const transactionSchema = new Schema(
   {
@@ -27,5 +27,4 @@ transactionSchema.index({ walletId: 1 });
 transactionSchema.index({ debtId: 1 });
 
 export type TransactionDoc = InferSchemaType<typeof transactionSchema>;
-export const Transaction =
-  (models.Transaction as Model<TransactionDoc>) ?? model("Transaction", transactionSchema);
+export const Transaction = defineModel("Transaction", transactionSchema);

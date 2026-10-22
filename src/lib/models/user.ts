@@ -1,4 +1,5 @@
-import { Schema, model, models, type InferSchemaType, type Model } from "mongoose";
+import { Schema, type InferSchemaType } from "mongoose";
+import { defineModel } from "./_shared";
 
 const backupCodeSchema = new Schema(
   {
@@ -15,6 +16,8 @@ const userSchema = new Schema(
     /** Google Authenticator kaliti — ENCRYPTION_KEY bilan shifrlangan holda */
     totpSecret: { type: String, default: null },
     totpEnabled: { type: Boolean, default: false },
+    /** Oxirgi ishlatilgan kodning vaqt qadami — bitta kodni ikki marta ishlatib bo'lmasligi uchun */
+    totpLastStep: { type: Number, default: null },
     backupCodes: { type: [backupCodeSchema], default: [] },
     failedLoginCount: { type: Number, default: 0 },
     lockedUntil: { type: Date, default: null },
@@ -24,4 +27,4 @@ const userSchema = new Schema(
 );
 
 export type UserDoc = InferSchemaType<typeof userSchema>;
-export const User = (models.User as Model<UserDoc>) ?? model("User", userSchema);
+export const User = defineModel("User", userSchema);

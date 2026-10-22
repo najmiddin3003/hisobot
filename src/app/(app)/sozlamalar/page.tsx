@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
-import { ShieldCheck, Tags, TerminalSquare } from "lucide-react";
+import { unstable_rethrow } from "next/navigation";
+import { ShieldCheck, Tags, TerminalSquare, type LucideIcon } from "lucide-react";
 import { ColorIcon } from "@/components/color-icon";
 import { ComingSoon } from "@/components/coming-soon";
 import { DatabaseProblem } from "@/components/database-problem";
@@ -10,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { getSettingsOverview } from "@/lib/data/settings";
 import type { WalletKind } from "@/lib/domain";
+import { SecuritySection, SecuritySectionSkeleton } from "./security-section";
 
 export const metadata: Metadata = { title: "Sozlamalar" };
 
@@ -22,8 +24,14 @@ const WALLET_KIND_LABELS: Record<WalletKind, string> = {
 export default function SettingsPage() {
   return (
     <>
-      <PageHeader title="Sozlamalar" description="Kategoriyalar, hamyonlar, xavfsizlik va seanslar" />
+      <PageHeader title="Sozlamalar" description="Xavfsizlik, seanslar, kategoriyalar va hamyonlar" />
 
+      <SectionTitle icon={ShieldCheck} title="Xavfsizlik" />
+      <Suspense fallback={<SecuritySectionSkeleton />}>
+        <SecuritySection />
+      </Suspense>
+
+      <SectionTitle icon={Tags} title="Hamyonlar va kategoriyalar" />
       <Suspense
         fallback={
           <div className="grid gap-6 lg:grid-cols-3">
@@ -37,28 +45,32 @@ export default function SettingsPage() {
         <SettingsContent />
       </Suspense>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <ComingSoon
-          icon={ShieldCheck}
-          title="Xavfsizlik va seanslar"
-          description="Parol, Google Authenticator, zaxira kodlar va faol seanslarni boshqarish"
-          stage={2}
-        />
-        <ComingSoon
-          icon={Tags}
-          title="Kategoriya va hamyonlarni tahrirlash"
-          description="Yangi qo'shish, nomi, rangi, ikonkasi va bot uchun kalit so'zlar"
-          stage={9}
-        />
-      </div>
+      <ComingSoon
+        icon={Tags}
+        title="Kategoriya va hamyonlarni tahrirlash"
+        description="Yangi qo'shish, nomi, rangi, ikonkasi va bot uchun kalit so'zlar"
+        stage={9}
+      />
     </>
+  );
+}
+
+function SectionTitle({ icon: Icon, title }: { icon: LucideIcon; title: string }) {
+  return (
+    <h2 className="-mb-2 flex items-center gap-2 text-sm font-semibold tracking-wide text-muted-foreground uppercase">
+      <Icon className="size-4" /> {title}
+    </h2>
   );
 }
 
 async function SettingsContent() {
   const result = await getSettingsOverview().then(
     (data) => ({ ok: true as const, data }),
-    (error: unknown) => ({ ok: false as const, error }),
+    (error: unknown) => {
+      // Login sahifasiga yo'naltirish kabi Next.js signallari xato emas — o'tkazib yuboriladi
+      unstable_rethrow(error);
+      return { ok: false as const, error };
+    },
   );
   if (!result.ok) return <DatabaseProblem error={result.error} />;
 

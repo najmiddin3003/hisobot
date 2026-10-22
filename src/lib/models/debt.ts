@@ -1,6 +1,6 @@
-import { Schema, model, models, type InferSchemaType, type Model } from "mongoose";
+import { Schema, type InferSchemaType } from "mongoose";
 import { DEBT_DIRECTIONS, DEBT_KINDS, DEBT_STATUSES } from "@/lib/domain";
-import { deletedAtField, moneyField, noteField, sourceField } from "./_shared";
+import { defineModel, deletedAtField, moneyField, noteField, sourceField } from "./_shared";
 
 /**
  * Qarz, xaq yoki kredit. To'lovlar alohida saqlanmaydi — ular debtId bilan
@@ -31,4 +31,4 @@ const debtSchema = new Schema(
 debtSchema.index({ deletedAt: 1, direction: 1, status: 1 });
 
 export type DebtDoc = InferSchemaType<typeof debtSchema>;
-export const Debt = (models.Debt as Model<DebtDoc>) ?? model("Debt", debtSchema);
+export const Debt = defineModel("Debt", debtSchema);
