@@ -1,36 +1,43 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Hisob — shaxsiy moliya
 
-## Getting Started
+Kirim-chiqim, budjet, qarzlar va kreditlarni nazorat qilish tizimi. Next.js (App Router) + MongoDB, Telegram bot va AI yordamchi bilan.
 
-First, run the development server:
+## Ishga tushirish
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+1. Bog'liqliklarni o'rnating:
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+   ```bash
+   npm install
+   ```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+2. `.env.local` faylida bo'sh qatorlarni to'ldiring (namuna — `.env.example`). Birinchi bosqich uchun `MONGODB_URI` yetarli.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+3. Akkaunt, standart kategoriyalar va hamyonlarni yarating:
 
-## Learn More
+   ```bash
+   npm run setup
+   ```
 
-To learn more about Next.js, take a look at the following resources:
+4. Saytni ishga tushiring va http://localhost:3000 ni oching:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+   ```bash
+   npm run dev
+   ```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Buyruqlar
 
-## Deploy on Vercel
+| Buyruq | Vazifasi |
+|---|---|
+| `npm run dev` | Ishlab chiqish serveri |
+| `npm run build` | Production build |
+| `npm run setup` | Birinchi sozlash (qayta ishga tushirish xavfsiz) |
+| `npm run gen:secret` | Yangi maxfiy kalit yaratish |
+| `npm run lint` / `npm run typecheck` | Kod tekshiruvi |
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Tuzilma
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `src/app/(app)/` — sidebar ichidagi sahifalar: Dashboard (`/`), Kirim-chiqim, Budjet, Qarzlar, Xaq, Sozlamalar
+- `src/lib/models/` — MongoDB modellari
+- `src/lib/data/` — sahifalar uchun bazadan o'qish (faqat serverda)
+- `src/lib/dates.ts`, `src/lib/money.ts` — Toshkent vaqti va so'm formatlash
+- `scripts/` — terminal buyruqlari
