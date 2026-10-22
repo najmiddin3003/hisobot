@@ -7,3 +7,5 @@ export { Transfer, type TransferDoc } from "./transfer";
 export { Debt, type DebtDoc } from "./debt";
 export { Recurring, type RecurringDoc } from "./recurring";
 export { BotState, type BotStateDoc } from "./bot-state";
+export { AiChat, type AiChatDoc } from "./ai-chat";
+export { AiInsight, type AiInsightDoc } from "./ai-insight";

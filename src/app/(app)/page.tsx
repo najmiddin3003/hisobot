@@ -1,7 +1,6 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
-import { Sparkles } from "lucide-react";
-import { ComingSoon } from "@/components/coming-soon";
+import { AiInsightCard } from "@/components/dashboard/ai-insight";
 import { CategoryBreakdown } from "@/components/dashboard/category-breakdown";
 import { DailyChart } from "@/components/dashboard/daily-chart";
 import { DebtsSummary } from "@/components/dashboard/debts-summary";
@@ -13,6 +12,7 @@ import { PageHeader } from "@/components/page-header";
 import { ListCardSkeleton, StatCardsSkeleton } from "@/components/skeletons";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { getMonthInsight } from "@/lib/data/ai";
 import { getDashboard } from "@/lib/data/dashboard";
 import { getRecentEntries } from "@/lib/data/entries";
 import { formatMoney } from "@/lib/money";
@@ -45,12 +45,9 @@ async function DashboardContent({ searchParams }: Pick<PageProps<"/">, "searchPa
 
       <div className="grid gap-6 xl:grid-cols-3">
         <CategoryBreakdown data={data} className="xl:col-span-2" />
-        <ComingSoon
-          icon={Sparkles}
-          title="AI tahlil"
-          description="Keraksiz xarajatlar va tejash bo'yicha maslahatlar"
-          stage={8}
-        />
+        <Suspense fallback={<Skeleton className="h-80 rounded-xl" />}>
+          <AiInsightSection month={data.month} monthLabel={data.monthLabel} />
+        </Suspense>
       </div>
 
       <div className="grid gap-6 xl:grid-cols-3">
@@ -81,6 +78,21 @@ async function DashboardContent({ searchParams }: Pick<PageProps<"/">, "searchPa
         <TopExpenses data={data} />
       </div>
     </>
+  );
+}
+
+async function AiInsightSection({ month, monthLabel }: { month: string; monthLabel: string }) {
+  const { configured, insight, changedSince } = await getMonthInsight(month);
+  return (
+    // Oy almashganda kartochka holati yangidan boshlanadi
+    <AiInsightCard
+      key={month}
+      month={month}
+      monthLabel={monthLabel}
+      configured={configured}
+      initial={insight}
+      changedSince={changedSince}
+    />
   );
 }
 

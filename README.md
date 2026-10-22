@@ -60,6 +60,18 @@ Botdan kiritilgan yozuvlar saytda **Telegram** belgisi bilan ko'rinadi.
 
 Bot o'zi xabar beradi: saytga yangi kirish bo'lganda, takroriy to'lov yozilganda; qarz va kredit eslatmalari — har kuni ertalab (cron 10-bosqichda ulanadi).
 
+## AI yordamchi
+
+1. [console.anthropic.com](https://console.anthropic.com) → **API Keys** → yangi kalit yarating va `.env.local` dagi `ANTHROPIC_API_KEY` ga yozing.
+2. Ixtiyoriy: `ANTHROPIC_MODEL` — standart `claude-opus-5-5`; arzonroq variant — `claude-sonnet-5-5`.
+3. Saytni qayta ishga tushiring. Kalit bo'lmasa, sayt ishlayveradi — faqat AI bloklari "ulanmagan" deb ko'rsatiladi.
+
+- Har sahifaning pastki o'ng burchagidagi tugma suhbat panelini ochadi. AI savolga javob berish uchun bazadan kerakli ma'lumotlarni o'zi o'qiydi (oylik hisobot, oylar taqqoslash, yozuvlar qidiruvi, budjet, qarzlar, takroriy to'lovlar).
+- AI ma'lumotlarni **faqat o'qiydi**: yozuv qo'shish, o'zgartirish yoki o'chirish imkoni yo'q.
+- Suhbatlar bazada saqlanadi (`aichats`), tarixdan qayta ochish yoki o'chirish mumkin.
+- Dashboard'dagi **AI tahlil** — tanlangan oy bo'yicha xulosa, keraksiz xarajatlar va tejash maslahatlari. Faqat "Tahlil qilish / Yangilash" bosilganda tayyorlanadi va oy uchun saqlanadi (`aiinsights`), shuning uchun sahifani ochish pulli emas.
+- AI faqat saytda; Telegram botda yo'q.
+
 ## Kirish va xavfsizlik
 
 - Kirish ikki bosqichli: login + parol, keyin Google Authenticator kodi. Birinchi kirishda QR kod va 8 ta zaxira kod beriladi.
@@ -73,5 +85,6 @@ Bot o'zi xabar beradi: saytga yangi kirish bo'lganda, takroriy to'lov yozilganda
 - `src/app/(app)/` — sidebar ichidagi sahifalar: Dashboard (`/`), Kirim-chiqim, Budjet, Qarzlar, Xaq, Sozlamalar
 - `src/lib/models/` — MongoDB modellari
 - `src/lib/data/` — sahifalar uchun bazadan o'qish (faqat serverda)
+- `src/lib/ai/` — AI yordamchi: vositalar (faqat o'qish), prompt, suhbat sikli, oylik tahlil
 - `src/lib/dates.ts`, `src/lib/money.ts` — Toshkent vaqti va so'm formatlash
 - `scripts/` — terminal buyruqlari
