@@ -1,4 +1,4 @@
-const NBSP = " ";
+const NBSP = "\u00A0";
 
 /** 1250000 → "1 250 000" (raqamlar guruhi bo'shliq bilan, qatorga bo'linmaydi) */
 export function formatAmount(amount: number) {

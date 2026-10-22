@@ -7,17 +7,10 @@ import type { ActionResult } from "@/app/(app)/kirim-chiqim/actions";
 import { requireActionSession } from "@/lib/auth/guard";
 import { fromDateInput, fromDateTimeInput } from "@/lib/dates";
 import { connectDB } from "@/lib/db";
-import {
-  calcDebt,
-  paymentCategoryKey,
-  paymentTxType,
-  principalCategoryKey,
-  principalTxType,
-} from "@/lib/debts";
-import { paidByPayments, syncDebtStatus } from "@/lib/debts-sync";
-import { DEBT_DIRECTIONS, DEBT_KINDS, type SystemCategoryKey } from "@/lib/domain";
-import { Category, Debt, Transaction, Wallet } from "@/lib/models";
-import { formatMoney } from "@/lib/money";
+import { addPaymentRecord, saveDebtRecord } from "@/lib/debts-ops";
+import { syncDebtStatus } from "@/lib/debts-sync";
+import { DEBT_DIRECTIONS, DEBT_KINDS } from "@/lib/domain";
+import { Debt, Transaction } from "@/lib/models";
 
 const fail = (error: string): ActionResult => ({ ok: false, error });
 const firstIssue = (error: z.ZodError) => fail(error.issues[0]?.message ?? "Ma'lumotlar noto'g'ri");
@@ -55,17 +48,6 @@ const optionalDate = z
   });
 const note = z.string().trim().max(500, "Izoh 500 belgidan oshmasin").default("");
 
-async function systemCategoryId(key: SystemCategoryKey) {
-  const category = await Category.findOne({ systemKey: key }, { _id: 1 }).lean();
-  return category?._id ?? null;
-}
-
-async function activeWallet(walletId: string) {
-  return Wallet.exists({ _id: walletId, archived: false });
-}
-
-const entryNote = (counterparty: string, text: string) => (text ? `${counterparty} — ${text}` : counterparty);
-
 // ---- Qarz / xaq / kredit yaratish va tahrirlash ----
 
 const debtSchema = z
@@ -99,57 +81,30 @@ export async function saveDebt(input: unknown): Promise<ActionResult> {
   await requireActionSession();
   const parsed = debtSchema.safeParse(input);
   if (!parsed.success) return firstIssue(parsed.error);
-  const { id, recordEntry, walletId, ...data } = parsed.data;
-  const isCredit = data.kind === "kredit";
+  const { id, recordEntry, walletId, direction, kind, ...data } = parsed.data;
+  const isCredit = kind === "kredit";
 
   await connectDB();
-  if (recordEntry && !(await activeWallet(walletId))) return fail("Hamyonni tanlang");
-
-  const fields = {
-    counterparty: data.counterparty,
-    amount: data.amount,
-    startedAt: data.startedAt,
-    dueDate: isCredit ? null : data.dueDate,
-    monthlyPayment: isCredit ? data.monthlyPayment : null,
-    paymentDay: isCredit ? data.paymentDay : null,
-    termMonths: isCredit ? data.termMonths : null,
-    paidBefore: data.paidBefore,
-    note: data.note,
-  };
-
-  // Turi va yo'nalishi yaratilgandan keyin o'zgarmaydi
-  const debt = id
-    ? await Debt.findOne({ _id: id, deletedAt: null })
-    : new Debt({ ...fields, direction: data.direction, kind: data.kind, source: "web" });
-  if (!debt) return fail("Qarz topilmadi");
-  if (id) debt.set(fields);
-  await debt.save();
-
-  // Qarzning o'zi kirim (olinganda) yoki chiqim (berilganda) sifatida yoziladi
-  const principal = await Transaction.findOne({ debtId: debt._id, debtRole: "asosiy" });
-  if (recordEntry) {
-    const categoryId = await systemCategoryId(principalCategoryKey(debt.direction, debt.kind));
-    if (!categoryId) return fail("Tizim kategoriyasi topilmadi — terminalda npm run setup ni ishga tushiring");
-    const entry = {
-      type: principalTxType(debt.direction),
-      amount: debt.amount,
-      categoryId,
-      walletId,
-      occurredAt: debt.startedAt,
-      note: entryNote(debt.counterparty, debt.note),
-      deletedAt: null,
-    };
-    if (principal) {
-      principal.set(entry);
-      await principal.save();
-    } else {
-      await Transaction.create({ ...entry, debtId: debt._id, debtRole: "asosiy", source: "web" });
-    }
-  } else if (principal) {
-    await principal.deleteOne();
-  }
-
-  await syncDebtStatus(debt._id);
+  const result = await saveDebtRecord({
+    id,
+    direction,
+    kind,
+    recordEntry,
+    walletId,
+    source: "web",
+    fields: {
+      counterparty: data.counterparty,
+      amount: data.amount,
+      startedAt: data.startedAt,
+      dueDate: isCredit ? null : data.dueDate,
+      monthlyPayment: isCredit ? data.monthlyPayment : null,
+      paymentDay: isCredit ? data.paymentDay : null,
+      termMonths: isCredit ? data.termMonths : null,
+      paidBefore: data.paidBefore,
+      note: data.note,
+    },
+  });
+  if (!result.ok) return result;
   refresh();
   return { ok: true };
 }
@@ -168,32 +123,10 @@ export async function addDebtPayment(input: unknown): Promise<ActionResult> {
   await requireActionSession();
   const parsed = paymentSchema.safeParse(input);
   if (!parsed.success) return firstIssue(parsed.error);
-  const { debtId, walletId, ...data } = parsed.data;
 
   await connectDB();
-  const debt = await Debt.findOne({ _id: debtId, deletedAt: null });
-  if (!debt) return fail("Qarz topilmadi");
-  if (debt.status === "yopilgan") return fail("Bu qarz yopilgan");
-  if (!(await activeWallet(walletId))) return fail("Hamyonni tanlang");
-
-  const { remaining } = calcDebt(debt, await paidByPayments(debt._id));
-  if (data.amount > remaining) return fail(`Qolgan summa ${formatMoney(remaining)} — undan ko'p kiritib bo'lmaydi`);
-
-  const categoryId = await systemCategoryId(paymentCategoryKey(debt.direction, debt.kind));
-  if (!categoryId) return fail("Tizim kategoriyasi topilmadi — terminalda npm run setup ni ishga tushiring");
-
-  await Transaction.create({
-    type: paymentTxType(debt.direction),
-    amount: data.amount,
-    categoryId,
-    walletId,
-    occurredAt: data.occurredAt,
-    note: entryNote(debt.counterparty, data.note),
-    debtId: debt._id,
-    debtRole: "tolov",
-    source: "web",
-  });
-  await syncDebtStatus(debt._id);
+  const result = await addPaymentRecord({ ...parsed.data, source: "web" });
+  if (!result.ok) return result;
   refresh();
   return { ok: true };
 }

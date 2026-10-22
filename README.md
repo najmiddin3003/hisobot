@@ -33,8 +33,32 @@ Kirim-chiqim, budjet, qarzlar va kreditlarni nazorat qilish tizimi. Next.js (App
 | `npm run setup` | Birinchi sozlash (qayta ishga tushirish xavfsiz) |
 | `npm run reset-password` | Parolni unutganda: yangi parol, blokni olib tashlash, barcha seanslarni yopish |
 | `npm run reset-2fa` | Telefon va zaxira kodlar yo'qolganda: Google Authenticator'ni qayta ulash |
+| `npm run bot:dev` | Telegram botni kompyuterda ishga tushirish (polling) |
+| `npm run bot:webhook` | Vercel'dagi saytga bot webhook'ini ulash |
 | `npm run gen:secret` | Yangi maxfiy kalit yaratish |
 | `npm run lint` / `npm run typecheck` | Kod tekshiruvi |
+
+## Telegram bot
+
+1. Telegram'da **@BotFather** → `/newbot` → bot nomini bering va tokenni `.env.local` dagi `TELEGRAM_BOT_TOKEN` ga yozing.
+2. **@userinfobot** ga yozib, o'z ID'ingizni bilib oling va `TELEGRAM_ALLOWED_USER_ID` ga yozing. Bot faqat shu ID'ga javob beradi.
+3. Kompyuterda sinash (webhook kerak emas):
+
+   ```bash
+   npm run bot:dev
+   ```
+
+4. Sayt Vercel'ga joylangandan keyin (`APP_URL` — https manzil) webhook'ni bir marta o'rnating:
+
+   ```bash
+   npm run bot:webhook
+   ```
+
+Botda: login → parol (xabar darhol o'chiriladi) → Google Authenticator kodi. Seans 12 soat, bir vaqtda bitta.
+Tez yozish: `45000 taksi` (chiqim), `+12000000 oylik` (kirim), `1.5 mln ijara`, `45k kofe`.
+Botdan kiritilgan yozuvlar saytda **Telegram** belgisi bilan ko'rinadi.
+
+Bot o'zi xabar beradi: saytga yangi kirish bo'lganda, takroriy to'lov yozilganda; qarz va kredit eslatmalari — har kuni ertalab (cron 10-bosqichda ulanadi).
 
 ## Kirish va xavfsizlik
 

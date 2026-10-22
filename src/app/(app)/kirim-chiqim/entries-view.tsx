@@ -101,7 +101,7 @@ function MonthTotals({ totals }: { totals: Totals }) {
       {items.map((item) => (
         <div key={item.label} className="min-w-0 space-y-1 p-4">
           <p className="text-xs font-medium text-muted-foreground">{item.label}</p>
-          <p className={cn("truncate text-base font-semibold tabular-nums sm:text-xl", item.className)} title={item.value}>
+          <p className={cn("truncate text-base font-semibold tabular-nums xl:text-xl", item.className)} title={item.value}>
             {item.value}
           </p>
         </div>

@@ -11,12 +11,15 @@
     "setup": "tsx scripts/setup.ts",
     "gen:secret": "tsx scripts/gen-secret.ts",
     "reset-password": "tsx scripts/reset-password.ts",
-    "reset-2fa": "tsx scripts/reset-2fa.ts"
+    "reset-2fa": "tsx scripts/reset-2fa.ts",
+    "bot:dev": "tsx --conditions=react-server scripts/bot-dev.ts",
+    "bot:webhook": "tsx scripts/bot-webhook.ts"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
     "class-variance-authority": "^0.7.1",
     "cn": "^0.5.0",
+    "grammy": "^1.46.0",
     "input-otp": "^1.5.0",
     "lucide-react": "^1.61.0",
     "mongoose": "^9.11.3",

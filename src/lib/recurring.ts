@@ -8,6 +8,7 @@ import {
   tashkentToday,
 } from "@/lib/dates";
 import { Recurring, Transaction } from "@/lib/models";
+import { notifyRecurringAdded } from "@/lib/telegram/notify";
 
 /** Shu oyda to'lov kuni (oy qisqa bo'lsa — oxirgi kuni) */
 function dueDay(dayOfMonth: number, month: string) {
@@ -42,7 +43,7 @@ export async function generateDueRecurring(now = new Date()) {
     $or: [{ lastGeneratedMonth: null }, { lastGeneratedMonth: { $lt: current } }],
   }).lean();
 
-  let created = 0;
+  const created: { name: string; amount: number; type: "kirim" | "chiqim"; date: Date }[] = [];
   for (const item of items) {
     let last = item.lastGeneratedMonth;
     for (let i = 0; i < 12; i++) {
@@ -58,20 +59,23 @@ export async function generateDueRecurring(now = new Date()) {
       if (claim.modifiedCount !== 1) break; // boshqa so'rov allaqachon yozgan
 
       const { year, month: m } = monthParts(month);
-      const occurredAt = tashkentDate(year, m, day, 9);
+      const date = tashkentDate(year, m, day, 9);
+      const occurredAt = date > now ? now : date;
       await Transaction.create({
         type: item.type,
         amount: item.amount,
         categoryId: item.categoryId,
         walletId: item.walletId,
         note: item.note ? `${item.name} — ${item.note}` : item.name,
-        occurredAt: occurredAt > now ? now : occurredAt,
+        occurredAt,
         source: "auto",
         recurringId: item._id,
       });
       last = month;
-      created++;
+      created.push({ name: item.name, amount: item.amount, type: item.type, date: occurredAt });
     }
   }
-  return created;
+  // Telegram'da xabar beriladi (bot sozlangan bo'lsa)
+  notifyRecurringAdded(created);
+  return created.length;
 }

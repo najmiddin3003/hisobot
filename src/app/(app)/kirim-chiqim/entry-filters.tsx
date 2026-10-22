@@ -79,7 +79,7 @@ export function EntryFilterBar({
         ))}
       </div>
 
-      <div className="grid flex-1 grid-cols-2 gap-2 md:grid-cols-4">
+      <div className="grid flex-1 grid-cols-2 gap-2 xl:grid-cols-4">
         <Select
           value={filters.categoryId ?? ALL}
           onValueChange={(v) => update({ categoryId: v === ALL ? undefined : v })}
@@ -137,7 +137,7 @@ export function EntryFilterBar({
           </SelectContent>
         </Select>
 
-        <div className="relative col-span-2 md:col-span-1">
+        <div className="relative col-span-2 xl:col-span-1">
           <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={query}

@@ -6,3 +6,4 @@ export { Transaction, type TransactionDoc } from "./transaction";
 export { Transfer, type TransferDoc } from "./transfer";
 export { Debt, type DebtDoc } from "./debt";
 export { Recurring, type RecurringDoc } from "./recurring";
+export { BotState, type BotStateDoc } from "./bot-state";

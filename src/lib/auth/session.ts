@@ -73,24 +73,29 @@ export async function clearPendingLogin(sessionId?: Types.ObjectId) {
 
 // ---- To'liq kirish ----
 
-/** Yangi seans ochadi; saytdagi boshqa barcha seanslar darhol yopiladi (bir vaqtda faqat bitta) */
+/**
+ * Yangi seans ochadi; saytdagi boshqa barcha seanslar darhol yopiladi (bir vaqtda faqat bitta).
+ * Qurilma ma'lumoti va oldingi seans yopilgani qaytadi — Telegram xabari uchun.
+ */
 export async function startWebSession(userId: Types.ObjectId) {
-  await Session.updateMany(
+  const { modifiedCount } = await Session.updateMany(
     { userId, channel: "web", status: "active", revokedAt: null },
     { revokedAt: new Date(), revokeReason: "new_login" },
   );
 
   const token = randomToken();
   const expiresAt = new Date(Date.now() + SESSION_TTL_MS);
+  const meta = await requestMeta();
   await Session.create({
     userId,
     channel: "web",
     status: "active",
     tokenHash: hashToken(token),
     expiresAt,
-    ...(await requestMeta()),
+    ...meta,
   });
   (await cookies()).set(SESSION_COOKIE, token, cookieOptions(expiresAt));
+  return { ...meta, closedPrevious: modifiedCount > 0 };
 }
 
 export type WebSessionResult =

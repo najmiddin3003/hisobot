@@ -26,6 +26,8 @@ const debtSchema = new Schema(
     closedAt: { type: Date, default: null },
     /** tolandi — to'liq qaytarilgani uchun avtomatik yopilgan; qolda — foydalanuvchi o'zi yopgan (masalan kechilgan) */
     closeReason: { type: String, enum: ["tolandi", "qolda"], default: null },
+    /** Telegram eslatmasi oxirgi marta qaysi kun yuborilgani ("YYYY-MM-DD") — bir kunda ikki marta yuborilmasin */
+    lastReminderDay: { type: String, default: null },
     source: sourceField,
     deletedAt: deletedAtField,
   },

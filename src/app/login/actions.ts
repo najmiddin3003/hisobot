@@ -15,6 +15,8 @@ import { clearPendingLogin, getPendingLogin, startPendingLogin, startWebSession 
 import { verifyTotp } from "@/lib/auth/totp";
 import { issueBackupCodes } from "@/lib/auth/two-factor";
 import { connectDB } from "@/lib/db";
+import { notifyNewWebLogin } from "@/lib/telegram/notify";
+import { describeUserAgent } from "@/lib/user-agent";
 import { User } from "@/lib/models";
 
 export type LoginState = { error?: string; username?: string } | undefined;
@@ -66,7 +68,8 @@ export async function loginAction(_prev: LoginState, formData: FormData): Promis
 async function completeLogin(userId: Types.ObjectId, pendingSessionId: Types.ObjectId) {
   await clearFailedAttempts(userId);
   await clearPendingLogin(pendingSessionId);
-  await startWebSession(userId);
+  const { userAgent, ip, closedPrevious } = await startWebSession(userId);
+  notifyNewWebLogin({ device: describeUserAgent(userAgent), ip, closedPrevious });
 }
 
 export async function verifyCodeAction(_prev: CodeState, formData: FormData): Promise<CodeState> {
