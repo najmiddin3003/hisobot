@@ -1,7 +1,9 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
-import { HandCoins, Landmark } from "lucide-react";
-import { ComingSoon } from "@/components/coming-soon";
+import { DebtsSkeleton } from "@/components/debts/debts-skeleton";
+import { DebtsView } from "@/components/debts/debts-view";
 import { PageHeader } from "@/components/page-header";
+import { getDebtsPage } from "@/lib/data/debts";
 
 export const metadata: Metadata = { title: "Qarzlar" };
 
@@ -12,22 +14,13 @@ export default function DebtsPage() {
         title="Qarzlar"
         description="Siz qarzdor bo'lganlar: odamlardan olingan qarzlar va kreditlar"
       />
-      <div className="grid gap-6 lg:grid-cols-2">
-        <ComingSoon
-          icon={HandCoins}
-          title="Odamlardan olingan qarzlar"
-          description="Jami, to'langan, qolgan, muddat va qisman qaytarishlar tarixi"
-          stage={5}
-          className="min-h-64"
-        />
-        <ComingSoon
-          icon={Landmark}
-          title="Kreditlar"
-          description="Oylik to'lov, qolgan qarz, keyingi to'lov sanasi va necha oy qolgani"
-          stage={5}
-          className="min-h-64"
-        />
-      </div>
+      <Suspense fallback={<DebtsSkeleton />}>
+        <DebtsContent />
+      </Suspense>
     </>
   );
+}
+
+async function DebtsContent() {
+  return <DebtsView direction="olingan" data={await getDebtsPage("olingan")} />;
 }

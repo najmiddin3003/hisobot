@@ -98,6 +98,29 @@ export function fromDateTimeInput(value: string) {
   return toDateTimeInput(date).startsWith(value.slice(0, 16)) ? date : null;
 }
 
+/** <input type="date"> uchun: "2026-10-22" (Toshkent vaqti) */
+export const toDateInput = dayKey;
+
+/** "2026-12-01" → Toshkent vaqti bilan o'sha kun boshi; noto'g'ri bo'lsa null */
+export function fromDateInput(value: string) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(value) ? fromDateTimeInput(`${value}T00:00`) : null;
+}
+
+/** Toshkent kalendari bo'yicha necha kun qoldi (o'tib ketgan bo'lsa manfiy) */
+export function daysUntil(date: Date, now = new Date()) {
+  const toUtcDay = (d: Date) => {
+    const [y, m, day] = dayKey(d).split("-").map(Number);
+    return Date.UTC(y, m - 1, day);
+  };
+  return Math.round((toUtcDay(date) - toUtcDay(now)) / (24 * 60 * 60 * 1000));
+}
+
+/** Oyning shu kuni (oyda bunday kun bo'lmasa — oxirgi kuni), Toshkent vaqti bilan */
+export function dayOfMonthIn(month: string, day: number, hour = 9) {
+  const { year, month: m } = parseMonthKey(month);
+  return tashkentDate(year, m, Math.min(day, daysInMonth(month)), hour);
+}
+
 /** Toshkent vaqti bo'yicha bugungi sana qismlari */
 export function tashkentToday(now = new Date()) {
   const { year, month, day } = tashkentParts(now);

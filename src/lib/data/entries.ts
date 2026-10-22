@@ -189,7 +189,8 @@ export async function getTrash() {
   const lookups = await loadLookups();
   const deleted = { deletedAt: { $ne: null } };
   const [transactions, transfers] = await Promise.all([
-    findTransactions(deleted, 300, { deletedAt: -1 }),
+    // Qarz bilan birga o'chirilgan yozuvlar savatchada ko'rsatilmaydi — ular qarzning bir qismi
+    findTransactions({ ...deleted, debtId: null }, 300, { deletedAt: -1 }),
     findTransfers(deleted, 300, { deletedAt: -1 }),
   ]);
   return [...transactions.map((t) => toTxEntry(t, lookups)), ...transfers.map((t) => toTransferEntry(t, lookups))].sort(

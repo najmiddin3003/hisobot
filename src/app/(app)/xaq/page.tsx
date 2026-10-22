@@ -1,7 +1,9 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
-import { Handshake } from "lucide-react";
-import { ComingSoon } from "@/components/coming-soon";
+import { DebtsSkeleton } from "@/components/debts/debts-skeleton";
+import { DebtsView } from "@/components/debts/debts-view";
 import { PageHeader } from "@/components/page-header";
+import { getDebtsPage } from "@/lib/data/debts";
 
 export const metadata: Metadata = { title: "Xaq" };
 
@@ -9,13 +11,13 @@ export default function ReceivablesPage() {
   return (
     <>
       <PageHeader title="Xaq" description="Sizga qarzdor bo'lganlar: siz bergan qarzlar" />
-      <ComingSoon
-        icon={Handshake}
-        title="Bergan qarzlaringiz"
-        description="Kimga, qancha, qancha qaytardi, qolgani va muddati o'tganlar qizil belgi bilan"
-        stage={5}
-        className="min-h-72"
-      />
+      <Suspense fallback={<DebtsSkeleton />}>
+        <ReceivablesContent />
+      </Suspense>
     </>
   );
+}
+
+async function ReceivablesContent() {
+  return <DebtsView direction="berilgan" data={await getDebtsPage("berilgan")} />;
 }

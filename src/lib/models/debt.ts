@@ -19,9 +19,13 @@ const debtSchema = new Schema(
     monthlyPayment: { type: Number, default: null },
     paymentDay: { type: Number, min: 1, max: 31, default: null },
     termMonths: { type: Number, min: 1, default: null },
+    /** Tizimga kiritilishidan oldin qaytarilgan summa (eski qarz/kredit uchun) */
+    paidBefore: { type: Number, min: 0, default: 0 },
     note: noteField,
     status: { type: String, enum: DEBT_STATUSES, required: true, default: "ochiq" },
     closedAt: { type: Date, default: null },
+    /** tolandi — to'liq qaytarilgani uchun avtomatik yopilgan; qolda — foydalanuvchi o'zi yopgan (masalan kechilgan) */
+    closeReason: { type: String, enum: ["tolandi", "qolda"], default: null },
     source: sourceField,
     deletedAt: deletedAtField,
   },
