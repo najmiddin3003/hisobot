@@ -8,20 +8,14 @@ import { z } from "zod";
 import { lockedMessage, lockedMinutesLeft, registerFailedAttempt } from "@/lib/auth/attempts";
 import { MIN_PASSWORD_LENGTH } from "@/lib/auth/constants";
 import { decrypt } from "@/lib/auth/crypto";
-import { readWebSession, revokeSessions } from "@/lib/auth/session";
+import { requireActionSession } from "@/lib/auth/guard";
+import { revokeSessions } from "@/lib/auth/session";
 import { verifyTotp } from "@/lib/auth/totp";
 import { issueBackupCodes } from "@/lib/auth/two-factor";
 import { Session, User } from "@/lib/models";
 
 export type PasswordState = { error?: string; success?: boolean } | undefined;
 export type BackupCodesState = { error?: string; codes?: string[] } | undefined;
-
-/** Server action'lar ham seansni o'zi tekshiradi — mijozga ishonilmaydi */
-async function requireSession() {
-  const session = await readWebSession();
-  if (session.status !== "ok") redirect(session.reason ? `/login?sabab=${session.reason}` : "/login");
-  return session;
-}
 
 const passwordSchema = z
   .object({
@@ -36,7 +30,7 @@ const passwordSchema = z
   .refine((v) => v.next !== v.current, { message: "Yangi parol eskisidan farq qilishi kerak" });
 
 export async function changePasswordAction(_prev: PasswordState, formData: FormData): Promise<PasswordState> {
-  const session = await requireSession();
+  const session = await requireActionSession();
   const parsed = passwordSchema.safeParse({
     current: formData.get("current"),
     next: formData.get("next"),
@@ -67,7 +61,7 @@ export async function regenerateBackupCodesAction(
   _prev: BackupCodesState,
   formData: FormData,
 ): Promise<BackupCodesState> {
-  const session = await requireSession();
+  const session = await requireActionSession();
   const user = await User.findById(session.user.id);
   if (!user?.totpSecret) redirect("/login");
   const minutes = lockedMinutesLeft(user);
@@ -88,7 +82,7 @@ export async function regenerateBackupCodesAction(
 }
 
 export async function revokeSessionAction(sessionId: string) {
-  const session = await requireSession();
+  const session = await requireActionSession();
   if (!isValidObjectId(sessionId) || session.sessionId.equals(sessionId)) return;
   await Session.updateOne(
     { _id: sessionId, userId: session.user.id, revokedAt: null },

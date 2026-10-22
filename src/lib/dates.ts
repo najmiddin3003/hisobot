@@ -60,6 +60,50 @@ export function formatDateTime(date: Date) {
   return `${formatDate(date)}, ${formatTime(date)}`;
 }
 
+/** Toshkent vaqti bo'yicha kun: "2026-10-22" (yozuvlarni kunlar bo'yicha guruhlash uchun) */
+export function dayKey(date: Date) {
+  const p = tashkentParts(date);
+  return `${p.year}-${pad(p.month)}-${pad(p.day)}`;
+}
+
+/** Kun sarlavhasi: "Bugun", "Kecha" yoki "20 oktabr, seshanba" (boshqa yil bo'lsa yili bilan) */
+export function formatDayHeading(key: string, now = new Date()) {
+  const [year, month, day] = key.split("-").map(Number);
+  const today = dayKey(now);
+  if (key === today) return "Bugun";
+  if (key === dayKey(new Date(now.getTime() - 24 * 60 * 60 * 1000))) return "Kecha";
+  const weekday = WEEKDAY_NAMES[new Date(Date.UTC(year, month - 1, day)).getUTCDay()];
+  const yearPart = String(year) === today.slice(0, 4) ? "" : ` ${year}`;
+  return `${day} ${MONTH_NAMES[month - 1].toLowerCase()}${yearPart}, ${weekday}`;
+}
+
+/** Toshkent vaqtidagi aniq lahza */
+export function tashkentDate(year: number, month: number, day: number, hour = 0, minute = 0) {
+  return new Date(Date.UTC(year, month - 1, day, hour, minute) - TASHKENT_OFFSET_MS);
+}
+
+/** <input type="datetime-local"> uchun: "2026-10-22T14:35" (Toshkent vaqti) */
+export function toDateTimeInput(date: Date) {
+  const p = tashkentParts(date);
+  return `${p.year}-${pad(p.month)}-${pad(p.day)}T${pad(p.hour)}:${pad(p.minute)}`;
+}
+
+/** "2026-10-22T14:35" (Toshkent vaqti) → Date; noto'g'ri bo'lsa null */
+export function fromDateTimeInput(value: string) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(value);
+  if (!match) return null;
+  const [year, month, day, hour, minute] = match.slice(1).map(Number);
+  const date = tashkentDate(year, month, day, hour, minute);
+  // 31-fevral kabi mavjud bo'lmagan sanalarni rad etish
+  return toDateTimeInput(date).startsWith(value.slice(0, 16)) ? date : null;
+}
+
+/** Toshkent vaqti bo'yicha bugungi sana qismlari */
+export function tashkentToday(now = new Date()) {
+  const { year, month, day } = tashkentParts(now);
+  return { year, month, day };
+}
+
 // ---- Oylar ("YYYY-MM" kalitlari) ----
 
 const MONTH_KEY_RE = /^(\d{4})-(0[1-9]|1[0-2])$/;
@@ -102,6 +146,15 @@ export function monthRange(key: string) {
     start: new Date(Date.UTC(year, month - 1, 1) - TASHKENT_OFFSET_MS),
     end: new Date(Date.UTC(year, month, 1) - TASHKENT_OFFSET_MS),
   };
+}
+
+export function daysInMonth(key: string) {
+  const { year, month } = parseMonthKey(key);
+  return new Date(Date.UTC(year, month, 0)).getUTCDate();
+}
+
+export function monthParts(key: string) {
+  return parseMonthKey(key);
 }
 
 /** "Oktabr 2026" */

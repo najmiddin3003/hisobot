@@ -16,7 +16,7 @@ import {
   shiftMonth,
   toMonthKey,
 } from "@/lib/dates";
-import { findNavItem } from "@/lib/nav";
+import { isMonthlyPage } from "@/lib/nav";
 
 /** Tanlangan oy URL'da ?oy=YYYY-MM ko'rinishida saqlanadi; joriy oyda parametr bo'lmaydi */
 export function MonthPicker() {
@@ -28,7 +28,7 @@ export function MonthPicker() {
   const [open, setOpen] = useState(false);
   const [year, setYear] = useState(() => Number(selected.slice(0, 4)));
 
-  if (!findNavItem(pathname)?.monthly) return null;
+  if (!isMonthlyPage(pathname)) return null;
 
   const hrefFor = (key: string) => {
     const params = new URLSearchParams(searchParams);
@@ -134,6 +134,6 @@ export function MonthPicker() {
 /** URL parametrlari kelguncha joy egallab turadi (sahifa sakramasligi uchun) */
 export function MonthPickerFallback() {
   const pathname = usePathname();
-  if (!findNavItem(pathname)?.monthly) return null;
+  if (!isMonthlyPage(pathname)) return null;
   return <Skeleton className="h-8 w-56 rounded-lg" />;
 }

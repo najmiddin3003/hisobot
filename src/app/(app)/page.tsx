@@ -1,11 +1,13 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
 import { io } from "next/cache";
-import { History, PieChart, Scale, Sparkles, TrendingDown, TrendingUp, Wallet, ChartColumn } from "lucide-react";
+import { PieChart, Scale, Sparkles, TrendingDown, TrendingUp, Wallet, ChartColumn } from "lucide-react";
 import { ComingSoon } from "@/components/coming-soon";
+import { RecentEntries } from "@/components/entries/recent-entries";
 import { PageHeader } from "@/components/page-header";
-import { StatCardsSkeleton } from "@/components/skeletons";
+import { ListCardSkeleton, StatCardsSkeleton } from "@/components/skeletons";
 import { StatCard } from "@/components/stat-card";
+import { getRecentEntries } from "@/lib/data/entries";
 import { monthLabel, resolveMonthParam, shiftMonth } from "@/lib/dates";
 import { formatMoney } from "@/lib/money";
 
@@ -43,15 +45,17 @@ export default function DashboardPage({ searchParams }: PageProps<"/">) {
           description="Har oydagi kirim va chiqim grafigi"
           stage={6}
         />
-        <ComingSoon
-          icon={History}
-          title="So'nggi yozuvlar"
-          description="Oxirgi kirim-chiqimlar sana-vaqti va manbasi bilan"
-          stage={3}
-        />
+        <Suspense fallback={<ListCardSkeleton rows={5} />}>
+          <RecentEntriesSection />
+        </Suspense>
       </div>
     </>
   );
+}
+
+async function RecentEntriesSection() {
+  const { entries, options } = await getRecentEntries();
+  return <RecentEntries entries={entries} options={options} />;
 }
 
 async function MonthSummary({ searchParams }: Pick<PageProps<"/">, "searchParams">) {

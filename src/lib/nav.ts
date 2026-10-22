@@ -64,6 +64,12 @@ export const SETTINGS_NAV: NavItem = {
 
 export const ALL_NAV = [...MAIN_NAV, ...DEBT_NAV, SETTINGS_NAV];
 
+/** Oy tanlagich faqat bo'limning asosiy sahifasida (masalan /kirim-chiqim/takroriy da emas) */
+export function isMonthlyPage(pathname: string) {
+  const item = findNavItem(pathname);
+  return Boolean(item?.monthly && pathname === item.href);
+}
+
 export function findNavItem(pathname: string) {
   return ALL_NAV.find((item) =>
     item.href === "/" ? pathname === "/" : pathname === item.href || pathname.startsWith(`${item.href}/`),
