@@ -91,3 +91,44 @@ export async function getDebtsPage(direction: DebtDirection) {
 
   return { items: [...open, ...closed], wallets: options.wallets };
 }
+
+const UPCOMING_DAYS = 30;
+
+/**
+ * Dashboard uchun: ochiq qarz/xaq qoldiqlari va yaqin 30 kundagi (yoki muddati o'tgan) to'lovlar.
+ * Seans chaqiruvchi tomonda tekshirilgan bo'lishi kerak.
+ */
+export async function loadDebtOverview(now = new Date()) {
+  const debts = await Debt.find({ deletedAt: null, status: "ochiq" }).lean();
+  const payments = await Transaction.aggregate<{ _id: unknown; total: number }>([
+    { $match: { debtId: { $in: debts.map((d) => d._id) }, debtRole: "tolov", deletedAt: null } },
+    { $group: { _id: "$debtId", total: { $sum: "$amount" } } },
+  ]);
+
+  let owe = 0;
+  let owed = 0;
+  const upcoming = [];
+  for (const debt of debts) {
+    const paid = payments.find((p) => debt._id.equals(String(p._id)))?.total ?? 0;
+    const calc = calcDebt(debt, paid, now);
+    if (calc.remaining === 0) continue;
+    if (debt.direction === "olingan") owe += calc.remaining;
+    else owed += calc.remaining;
+
+    if (calc.nextDue && calc.daysToDue !== null && calc.daysToDue <= UPCOMING_DAYS) {
+      upcoming.push({
+        id: String(debt._id),
+        counterparty: debt.counterparty,
+        direction: debt.direction,
+        kind: debt.kind,
+        // Kreditda — navbatdagi oylik to'lov, oddiy qarzda — qolgan summa
+        amount: debt.kind === "kredit" ? Math.min(debt.monthlyPayment ?? calc.remaining, calc.remaining) : calc.remaining,
+        nextDue: calc.nextDue.toISOString(),
+        daysToDue: calc.daysToDue,
+        overdue: calc.overdue,
+      });
+    }
+  }
+  upcoming.sort((a, b) => a.daysToDue - b.daysToDue);
+  return { owe, owed, overdueCount: upcoming.filter((u) => u.overdue).length, upcoming };
+}

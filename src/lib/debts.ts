@@ -69,3 +69,9 @@ export function paymentCategoryKey(direction: DebtDirection, kind: DebtKind): Sy
 /** Qarz olish → kirim, berish → chiqim; qaytarish — aksincha */
 export const principalTxType = (direction: DebtDirection): TxType => (direction === "olingan" ? "kirim" : "chiqim");
 export const paymentTxType = (direction: DebtDirection): TxType => (direction === "olingan" ? "chiqim" : "kirim");
+
+/** "bugun", "14 kun qoldi", "3 kun o'tdi" */
+export function daysText(days: number) {
+  if (days === 0) return "bugun";
+  return days > 0 ? `${days} kun qoldi` : `${-days} kun o'tdi`;
+}

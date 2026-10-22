@@ -2,7 +2,7 @@ import "server-only";
 import type { Types } from "mongoose";
 import { requireUser } from "@/lib/auth/dal";
 import { connectDB } from "@/lib/db";
-import { monthRange } from "@/lib/dates";
+import { monthRange, resolveMonthParam } from "@/lib/dates";
 import type { Entry, EntryFilters, EntryOptions, TransferEntry, TxEntry } from "@/lib/entries";
 import { Category, Recurring, Transaction, Transfer, Wallet, type CategoryDoc, type WalletDoc } from "@/lib/models";
 import { generateDueRecurring, nextRecurringDate } from "@/lib/recurring";
@@ -125,11 +125,13 @@ async function monthTotals(start: Date, end: Date) {
 }
 
 /** Kirim-chiqim sahifasi: tanlangan oy yozuvlari (filtr bilan), oy jami va forma uchun ro'yxatlar */
-export async function getEntriesPage(month: string, filters: EntryFilters) {
+export async function getEntriesPage(monthParam: unknown, filters: EntryFilters) {
   await requireUser();
   await connectDB();
   await generateDueRecurring();
 
+  // Oy seans tekshiruvidan keyin aniqlanadi — joriy vaqt faqat so'rov paytida o'qiladi
+  const month = resolveMonthParam(monthParam);
   const { start, end } = monthRange(month);
   const lookups = await loadLookups();
   const inMonth = { deletedAt: null, occurredAt: { $gte: start, $lt: end } };
@@ -180,6 +182,17 @@ export async function getRecentEntries(limit = 6) {
     .sort(byOccurredDesc)
     .slice(0, limit);
   return { entries, options: selectableOptions(lookups.categories, lookups.wallets) };
+}
+
+/** Oyning eng katta chiqimlari (seans chaqiruvchi tomonda tekshirilgan bo'lishi kerak) */
+export async function loadTopExpenses(start: Date, end: Date, limit = 5) {
+  const lookups = await loadLookups();
+  const rows = await findTransactions(
+    { deletedAt: null, type: "chiqim", occurredAt: { $gte: start, $lt: end } },
+    limit,
+    { amount: -1, occurredAt: -1 },
+  );
+  return rows.map((t) => toTxEntry(t, lookups));
 }
 
 /** Savatcha: o'chirilgan yozuvlar, oxirgi o'chirilgani birinchi */

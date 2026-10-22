@@ -7,18 +7,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import type { DebtItem } from "@/lib/data/debts";
 import { formatDate } from "@/lib/dates";
+import { daysText } from "@/lib/debts";
 import { formatMoney } from "@/lib/money";
 import { cn } from "@/lib/utils";
 
 export function debtIcon(debt: Pick<DebtItem, "kind" | "direction">) {
   if (debt.kind === "kredit") return Landmark;
   return debt.direction === "olingan" ? HandCoins : Handshake;
-}
-
-/** "bugun", "14 kun qoldi", "3 kun o'tdi" */
-export function daysText(days: number) {
-  if (days === 0) return "bugun";
-  return days > 0 ? `${days} kun qoldi` : `${-days} kun o'tdi`;
 }
 
 export function DebtProgress({ debt }: { debt: DebtItem }) {

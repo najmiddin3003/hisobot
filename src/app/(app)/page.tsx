@@ -1,15 +1,20 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
-import { io } from "next/cache";
-import { PieChart, Scale, Sparkles, TrendingDown, TrendingUp, Wallet, ChartColumn } from "lucide-react";
+import { Sparkles } from "lucide-react";
 import { ComingSoon } from "@/components/coming-soon";
+import { CategoryBreakdown } from "@/components/dashboard/category-breakdown";
+import { DailyChart } from "@/components/dashboard/daily-chart";
+import { DebtsSummary } from "@/components/dashboard/debts-summary";
+import { KpiRow } from "@/components/dashboard/kpi-row";
+import { TopExpenses } from "@/components/dashboard/top-expenses";
+import { TrendChart } from "@/components/dashboard/trend-chart";
 import { RecentEntries } from "@/components/entries/recent-entries";
 import { PageHeader } from "@/components/page-header";
 import { ListCardSkeleton, StatCardsSkeleton } from "@/components/skeletons";
-import { StatCard } from "@/components/stat-card";
-import { getCurrentTotal } from "@/lib/data/budget";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { getDashboard } from "@/lib/data/dashboard";
 import { getRecentEntries } from "@/lib/data/entries";
-import { monthLabel, resolveMonthParam, shiftMonth } from "@/lib/dates";
 import { formatMoney } from "@/lib/money";
 
 export const metadata: Metadata = { title: "Dashboard" };
@@ -19,18 +24,27 @@ export default function DashboardPage({ searchParams }: PageProps<"/">) {
     <>
       <PageHeader title="Dashboard" description="Oylik moliyaviy holatingiz bir qarashda" />
 
-      <Suspense fallback={<StatCardsSkeleton />}>
-        <MonthSummary searchParams={searchParams} />
+      <Suspense fallback={<DashboardSkeleton />}>
+        <DashboardContent searchParams={searchParams} />
       </Suspense>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <ComingSoon
-          className="lg:col-span-2"
-          icon={PieChart}
-          title="Kategoriyalar bo'yicha xarajatlar"
-          description="Doira diagramma va har bir kategoriyaning o'tgan oyga nisbatan o'zgarishi"
-          stage={6}
-        />
+      <Suspense fallback={<ListCardSkeleton rows={5} />}>
+        <RecentEntriesSection />
+      </Suspense>
+    </>
+  );
+}
+
+async function DashboardContent({ searchParams }: Pick<PageProps<"/">, "searchParams">) {
+  const { oy } = await searchParams;
+  const data = await getDashboard(oy);
+
+  return (
+    <>
+      <KpiRow data={data} />
+
+      <div className="grid gap-6 xl:grid-cols-3">
+        <CategoryBreakdown data={data} className="xl:col-span-2" />
         <ComingSoon
           icon={Sparkles}
           title="AI tahlil"
@@ -39,16 +53,32 @@ export default function DashboardPage({ searchParams }: PageProps<"/">) {
         />
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <ComingSoon
-          icon={ChartColumn}
-          title="12 oylik trend"
-          description="Har oydagi kirim va chiqim grafigi"
-          stage={6}
-        />
-        <Suspense fallback={<ListCardSkeleton rows={5} />}>
-          <RecentEntriesSection />
-        </Suspense>
+      <div className="grid gap-6 xl:grid-cols-3">
+        <Card className="xl:col-span-2">
+          <CardHeader>
+            <CardTitle>Kirim va chiqim — 12 oy</CardTitle>
+            <CardDescription>Har oy qancha kirdi va qancha ketdi</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <TrendChart trend={data.trend} />
+          </CardContent>
+        </Card>
+        <DebtsSummary data={data} />
+      </div>
+
+      <div className="grid gap-6 xl:grid-cols-3">
+        <Card className="xl:col-span-2">
+          <CardHeader>
+            <CardTitle>Kunlik xarajatlar</CardTitle>
+            <CardDescription>
+              {data.monthLabel} · kuniga o&apos;rtacha {formatMoney(data.dailyAverage)}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <DailyChart daily={data.daily} average={data.dailyAverage} />
+          </CardContent>
+        </Card>
+        <TopExpenses data={data} />
       </div>
     </>
   );
@@ -59,28 +89,16 @@ async function RecentEntriesSection() {
   return <RecentEntries entries={entries} options={options} />;
 }
 
-async function MonthSummary({ searchParams }: Pick<PageProps<"/">, "searchParams">) {
-  const { oy } = await searchParams;
-  // Joriy oy so'rov vaqtiga qarab aniqlanadi — prerender'da emas
-  await io();
-  const month = resolveMonthParam(oy);
-  const compareHint = `${monthLabel(shiftMonth(month, -1))} bilan taqqoslash`;
-  const total = await getCurrentTotal();
-
-  // Kirim, chiqim va sof natija 6-bosqichda haqiqiy hisob-kitob bilan almashtiriladi
+function DashboardSkeleton() {
   return (
-    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      <StatCard label="Kirim" value={formatMoney(0)} icon={TrendingUp} tone="income" hint={compareHint} />
-      <StatCard
-        label="Chiqim"
-        value={formatMoney(0)}
-        icon={TrendingDown}
-        tone="expense"
-        upIsGood={false}
-        hint={compareHint}
-      />
-      <StatCard label="Sof natija" value={formatMoney(0)} icon={Scale} tone="primary" hint="Kirim − chiqim" />
-      <StatCard label="Jami budjet" value={formatMoney(total)} icon={Wallet} tone="receivable" hint="Hozir, barcha hamyonlarda" />
-    </div>
+    <>
+      <StatCardsSkeleton />
+      {[0, 1, 2].map((row) => (
+        <div key={row} className="grid gap-6 xl:grid-cols-3">
+          <Skeleton className="h-80 rounded-xl xl:col-span-2" />
+          <Skeleton className="h-80 rounded-xl" />
+        </div>
+      ))}
+    </>
   );
 }

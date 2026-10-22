@@ -3,7 +3,6 @@ import type { Metadata } from "next";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getEntriesPage } from "@/lib/data/entries";
-import { resolveMonthParam } from "@/lib/dates";
 import { groupByDay, hasActiveFilters, parseEntryFilters } from "@/lib/entries";
 import { EntriesView } from "./entries-view";
 
@@ -21,7 +20,7 @@ async function EntriesContent({ searchParams }: Pick<PageProps<"/kirim-chiqim">,
   const params = await searchParams;
   const filters = parseEntryFilters(params);
   // getEntriesPage seansni tekshiradi — shundan keyingi kod faqat so'rov paytida ishlaydi
-  const data = await getEntriesPage(resolveMonthParam(params.oy), filters);
+  const data = await getEntriesPage(params.oy, filters);
 
   return (
     <EntriesView

@@ -17,11 +17,14 @@ export function EntryRow({
   entry,
   onClick,
   withDate = false,
+  compact = false,
   className,
 }: {
   entry: Entry;
   onClick?: () => void;
   withDate?: boolean;
+  /** Tor ustun uchun ixcham ko'rinish */
+  compact?: boolean;
   className?: string;
 }) {
   const occurredAt = new Date(entry.occurredAt);
@@ -49,17 +52,51 @@ export function EntryRow({
     </span>
   );
 
-  const content = (
+  const amount = (
+    <span
+      className={cn(
+        "shrink-0 text-right font-semibold tabular-nums",
+        !isTx ? "text-muted-foreground" : entry.type === "kirim" ? "text-income" : "text-expense",
+      )}
+    >
+      {isTx ? formatMoney(entry.type === "kirim" ? entry.amount : -entry.amount, { sign: true }) : formatMoney(entry.amount)}
+    </span>
+  );
+
+  const debtBadge = isTx && entry.debtId && (
+    <span className="inline-flex shrink-0 items-center gap-1 rounded-md bg-debt/10 px-1.5 py-0.5 text-[11px] font-medium text-debt">
+      <HandCoins className="size-3" /> Qarz
+    </span>
+  );
+
+  // Tor joylar uchun (masalan Dashboard'ning yon ustuni): yuqorida summa, ostida nom va sana bitta qatorda
+  const compactContent = (
+    <>
+      {icon}
+      <div className="min-w-0 flex-1 space-y-0.5">
+        <div className="flex min-w-0 items-center gap-1.5">
+          {amount}
+          {debtBadge}
+          <SourceBadge source={entry.source} className="shrink-0" />
+        </div>
+        <p className="truncate text-xs text-muted-foreground">
+          <span className="font-medium text-foreground">{title}</span>
+          {" · "}
+          <time dateTime={entry.occurredAt}>{when}</time>
+          {isTx && ` · ${entry.wallet.name}`}
+          {entry.note && ` · ${entry.note}`}
+        </p>
+      </div>
+    </>
+  );
+
+  const content = compact ? compactContent : (
     <>
       {icon}
       <div className="min-w-0 flex-1 space-y-0.5">
         <div className="flex min-w-0 items-center gap-2">
           <span className="truncate font-medium">{title}</span>
-          {isTx && entry.debtId && (
-            <span className="inline-flex shrink-0 items-center gap-1 rounded-md bg-debt/10 px-1.5 py-0.5 text-[11px] font-medium text-debt">
-              <HandCoins className="size-3" /> Qarz
-            </span>
-          )}
+          {debtBadge}
           <SourceBadge source={entry.source} className="shrink-0" />
         </div>
         <p className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
@@ -80,14 +117,7 @@ export function EntryRow({
           )}
         </p>
       </div>
-      <span
-        className={cn(
-          "shrink-0 text-right font-semibold tabular-nums",
-          !isTx ? "text-muted-foreground" : entry.type === "kirim" ? "text-income" : "text-expense",
-        )}
-      >
-        {isTx ? formatMoney(entry.type === "kirim" ? entry.amount : -entry.amount, { sign: true }) : formatMoney(entry.amount)}
-      </span>
+      {amount}
     </>
   );
 
