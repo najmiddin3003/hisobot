@@ -7,6 +7,7 @@ import { RecentEntries } from "@/components/entries/recent-entries";
 import { PageHeader } from "@/components/page-header";
 import { ListCardSkeleton, StatCardsSkeleton } from "@/components/skeletons";
 import { StatCard } from "@/components/stat-card";
+import { getCurrentTotal } from "@/lib/data/budget";
 import { getRecentEntries } from "@/lib/data/entries";
 import { monthLabel, resolveMonthParam, shiftMonth } from "@/lib/dates";
 import { formatMoney } from "@/lib/money";
@@ -64,8 +65,9 @@ async function MonthSummary({ searchParams }: Pick<PageProps<"/">, "searchParams
   await io();
   const month = resolveMonthParam(oy);
   const compareHint = `${monthLabel(shiftMonth(month, -1))} bilan taqqoslash`;
+  const total = await getCurrentTotal();
 
-  // 6-bosqichda haqiqiy hisob-kitob bilan almashtiriladi
+  // Kirim, chiqim va sof natija 6-bosqichda haqiqiy hisob-kitob bilan almashtiriladi
   return (
     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
       <StatCard label="Kirim" value={formatMoney(0)} icon={TrendingUp} tone="income" hint={compareHint} />
@@ -78,7 +80,7 @@ async function MonthSummary({ searchParams }: Pick<PageProps<"/">, "searchParams
         hint={compareHint}
       />
       <StatCard label="Sof natija" value={formatMoney(0)} icon={Scale} tone="primary" hint="Kirim − chiqim" />
-      <StatCard label="Jami budjet" value={formatMoney(0)} icon={Wallet} tone="receivable" hint="Barcha hamyonlar" />
+      <StatCard label="Jami budjet" value={formatMoney(total)} icon={Wallet} tone="receivable" hint="Hozir, barcha hamyonlarda" />
     </div>
   );
 }

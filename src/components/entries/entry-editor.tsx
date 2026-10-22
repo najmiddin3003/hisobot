@@ -25,10 +25,16 @@ import { cn } from "@/lib/utils";
 export type EntryKind = "chiqim" | "kirim" | "otkazma";
 
 type Payload =
-  | { mode: "new"; kind: EntryKind; now: string; walletId: string }
+  | { mode: "new"; kind: EntryKind; now: string; walletId: string; preset?: EntryPreset }
   | { mode: "edit"; entry: Entry };
 
-type EditorApi = { openNew: (kind: EntryKind) => void; openEdit: (entry: Entry) => void };
+/** Oldindan to'ldirilgan maydonlar — masalan "Oylik kiritish" uchun Oylik kategoriyasi */
+export type EntryPreset = { categoryId?: string; walletId?: string; note?: string; title?: string };
+
+type EditorApi = {
+  openNew: (kind: EntryKind, preset?: EntryPreset) => void;
+  openEdit: (entry: Entry) => void;
+};
 const EditorContext = createContext<EditorApi | null>(null);
 
 export function useEntryEditor() {
@@ -68,10 +74,10 @@ export function EntryEditorProvider({ options, children }: { options: EntryOptio
   };
 
   const api: EditorApi = {
-    openNew: (kind) => {
-      const remembered = readLastWallet();
-      const walletId = options.wallets.some((w) => w.id === remembered) ? remembered : (options.wallets[0]?.id ?? "");
-      show({ mode: "new", kind, now: toDateTimeInput(new Date()), walletId });
+    openNew: (kind, preset) => {
+      const wanted = preset?.walletId ?? readLastWallet();
+      const walletId = options.wallets.some((w) => w.id === wanted) ? wanted : (options.wallets[0]?.id ?? "");
+      show({ mode: "new", kind, now: toDateTimeInput(new Date()), walletId, preset });
     },
     openEdit: (entry) => show({ mode: "edit", entry }),
   };
@@ -118,6 +124,7 @@ async function undoableDelete(entry: Entry, onDone: () => void) {
 
 function EntryForm({ payload, options, onDone }: { payload: Payload; options: EntryOptions; onDone: () => void }) {
   const editing = payload.mode === "edit" ? payload.entry : null;
+  const preset = payload.mode === "new" ? payload.preset : undefined;
   const tx = editing?.kind === "tx" ? editing : null;
   const transfer = editing?.kind === "transfer" ? editing : null;
 
@@ -125,7 +132,7 @@ function EntryForm({ payload, options, onDone }: { payload: Payload; options: En
     payload.mode === "new" ? payload.kind : transfer ? "otkazma" : (tx?.type ?? "chiqim"),
   );
   const [amount, setAmount] = useState(editing?.amount ?? 0);
-  const [categoryId, setCategoryId] = useState(tx?.categoryId ?? "");
+  const [categoryId, setCategoryId] = useState(tx?.categoryId ?? preset?.categoryId ?? "");
   const [walletId, setWalletId] = useState(tx?.walletId ?? (payload.mode === "new" ? payload.walletId : ""));
   const [fromWalletId, setFromWalletId] = useState(
     transfer?.fromWalletId ?? (payload.mode === "new" ? payload.walletId : ""),
@@ -134,7 +141,7 @@ function EntryForm({ payload, options, onDone }: { payload: Payload; options: En
   const [occurredAt, setOccurredAt] = useState(
     editing ? toDateTimeInput(new Date(editing.occurredAt)) : payload.mode === "new" ? payload.now : "",
   );
-  const [note, setNote] = useState(editing?.note ?? "");
+  const [note, setNote] = useState(editing?.note ?? preset?.note ?? "");
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
@@ -206,7 +213,7 @@ function EntryForm({ payload, options, onDone }: { payload: Payload; options: En
   return (
     <form onSubmit={submit} className="space-y-5">
       <DialogHeader>
-        <DialogTitle>{editing ? "Yozuvni tahrirlash" : "Yangi yozuv"}</DialogTitle>
+        <DialogTitle>{editing ? "Yozuvni tahrirlash" : (preset?.title ?? "Yangi yozuv")}</DialogTitle>
         <DialogDescription>
           {editing
             ? `Kiritilgan: ${formatDateTime(new Date(editing.createdAt))}`

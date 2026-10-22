@@ -52,6 +52,12 @@ function selectableOptions(
   };
 }
 
+/** Yozuv oynasi uchun kategoriya va hamyonlar (seans chaqiruvchi tomonda tekshirilgan bo'lishi kerak) */
+export async function loadEntryOptions() {
+  const { categories, wallets } = await loadLookups();
+  return selectableOptions(categories, wallets);
+}
+
 type TxLean = Awaited<ReturnType<typeof findTransactions>>[number];
 type TransferLean = Awaited<ReturnType<typeof findTransfers>>[number];
 
