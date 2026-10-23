@@ -10,13 +10,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import type { BudgetOverview, MonthHistory, WalletBalance } from "@/lib/data/budget";
 import { MONTH_NAMES, currentMonthKey } from "@/lib/dates";
-import type { WalletKind } from "@/lib/domain";
+import { WALLET_KIND_LABELS } from "@/lib/domain";
 import { formatAmount, formatMoney } from "@/lib/money";
 import { cn } from "@/lib/utils";
 import { BalanceForm } from "./balance-dialog";
 import { SavingsChart } from "./savings-chart";
 
-const KIND_LABELS: Record<WalletKind, string> = { naqd: "Naqd pul", karta: "Bank kartasi", boshqa: "Boshqa" };
 
 export function BudgetView({ data }: { data: BudgetOverview }) {
   return (
@@ -208,7 +207,7 @@ function WalletCard({
           <ColorIcon icon={wallet.icon} color={wallet.color} className="size-10 rounded-xl" />
           <div className="min-w-0 flex-1">
             <p className="truncate font-semibold">{wallet.name}</p>
-            <p className="text-xs text-muted-foreground">{KIND_LABELS[wallet.kind]}</p>
+            <p className="text-xs text-muted-foreground">{WALLET_KIND_LABELS[wallet.kind]}</p>
           </div>
           {share > 0 && <span className="text-xs font-medium text-muted-foreground">{share}%</span>}
         </div>

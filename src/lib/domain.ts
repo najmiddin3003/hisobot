@@ -16,6 +16,12 @@ export const SOURCE_LABELS: Record<Source, string> = {
 export const WALLET_KINDS = ["naqd", "karta", "boshqa"] as const;
 export type WalletKind = (typeof WALLET_KINDS)[number];
 
+export const WALLET_KIND_LABELS: Record<WalletKind, string> = {
+  naqd: "Naqd pul",
+  karta: "Bank kartasi",
+  boshqa: "Boshqa",
+};
+
 /** olingan — men qarzdorman (Qarzlar bo'limi), berilgan — menga qarzdor (Xaq bo'limi) */
 export const DEBT_DIRECTIONS = ["olingan", "berilgan"] as const;
 export type DebtDirection = (typeof DEBT_DIRECTIONS)[number];

@@ -1,56 +1,35 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
+import Link from "next/link";
 import { unstable_rethrow } from "next/navigation";
-import { ShieldCheck, Tags, TerminalSquare, type LucideIcon } from "lucide-react";
-import { ColorIcon } from "@/components/color-icon";
-import { ComingSoon } from "@/components/coming-soon";
+import { Bot, ChevronRight, Palette, Repeat, ShieldCheck, Sparkles, Tags, TerminalSquare, type LucideIcon } from "lucide-react";
 import { DatabaseProblem } from "@/components/database-problem";
 import { PageHeader } from "@/components/page-header";
 import { ListCardSkeleton } from "@/components/skeletons";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { getSettingsOverview } from "@/lib/data/settings";
-import type { WalletKind } from "@/lib/domain";
+import { Skeleton } from "@/components/ui/skeleton";
+import { getSettingsOverview, type SettingsOverview } from "@/lib/data/settings";
+import { formatMoney } from "@/lib/money";
+import { CategoriesCard, WalletsCard } from "./catalog-view";
+import { ClearAiHistoryButton, ThemePicker } from "./preferences";
 import { SecuritySection, SecuritySectionSkeleton } from "./security-section";
 
 export const metadata: Metadata = { title: "Sozlamalar" };
 
-const WALLET_KIND_LABELS: Record<WalletKind, string> = {
-  naqd: "Naqd pul",
-  karta: "Bank kartasi",
-  boshqa: "Boshqa",
-};
-
 export default function SettingsPage() {
   return (
     <>
-      <PageHeader title="Sozlamalar" description="Xavfsizlik, seanslar, kategoriyalar va hamyonlar" />
+      <PageHeader title="Sozlamalar" description="Hamyonlar, kategoriyalar, ko'rinish, xizmatlar va xavfsizlik" />
+
+      <Suspense fallback={<SettingsSkeleton />}>
+        <SettingsContent />
+      </Suspense>
 
       <SectionTitle icon={ShieldCheck} title="Xavfsizlik" />
       <Suspense fallback={<SecuritySectionSkeleton />}>
         <SecuritySection />
       </Suspense>
-
-      <SectionTitle icon={Tags} title="Hamyonlar va kategoriyalar" />
-      <Suspense
-        fallback={
-          <div className="grid gap-6 lg:grid-cols-3">
-            <ListCardSkeleton rows={3} />
-            <div className="lg:col-span-2">
-              <ListCardSkeleton rows={6} />
-            </div>
-          </div>
-        }
-      >
-        <SettingsContent />
-      </Suspense>
-
-      <ComingSoon
-        icon={Tags}
-        title="Kategoriya va hamyonlarni tahrirlash"
-        description="Yangi qo'shish, nomi, rangi, ikonkasi va bot uchun kalit so'zlar"
-        stage={9}
-      />
     </>
   );
 }
@@ -60,6 +39,26 @@ function SectionTitle({ icon: Icon, title }: { icon: LucideIcon; title: string }
     <h2 className="-mb-2 flex items-center gap-2 text-sm font-semibold tracking-wide text-muted-foreground uppercase">
       <Icon className="size-4" /> {title}
     </h2>
+  );
+}
+
+function SettingsSkeleton() {
+  return (
+    <>
+      <SectionTitle icon={Tags} title="Hamyonlar va kategoriyalar" />
+      <div className="grid gap-6 lg:grid-cols-3">
+        <ListCardSkeleton rows={3} />
+        <div className="lg:col-span-2">
+          <ListCardSkeleton rows={6} />
+        </div>
+      </div>
+      <SectionTitle icon={Palette} title="Ko'rinish va xizmatlar" />
+      <div className="grid gap-6 lg:grid-cols-3">
+        {[0, 1, 2].map((i) => (
+          <Skeleton key={i} className="h-56 rounded-xl" />
+        ))}
+      </div>
+    </>
   );
 }
 
@@ -74,9 +73,7 @@ async function SettingsContent() {
   );
   if (!result.ok) return <DatabaseProblem error={result.error} />;
 
-  const { wallets, categories, hasUser } = result.data;
-  const expenseCategories = categories.filter((c) => c.type === "chiqim");
-  const incomeCategories = categories.filter((c) => c.type === "kirim");
+  const { wallets, categories, hasUser, integrations } = result.data;
 
   return (
     <>
@@ -92,67 +89,111 @@ async function SettingsContent() {
         </Card>
       )}
 
+      <SectionTitle icon={Tags} title="Hamyonlar va kategoriyalar" />
+      <div className="grid items-start gap-6 lg:grid-cols-3">
+        <WalletsCard wallets={wallets} />
+        <CategoriesCard categories={categories} className="lg:col-span-2" />
+      </div>
+
+      <SectionTitle icon={Palette} title="Ko'rinish va xizmatlar" />
       <div className="grid gap-6 lg:grid-cols-3">
         <Card>
           <CardHeader>
-            <CardTitle>Hamyonlar</CardTitle>
-            <CardDescription>{wallets.length} ta hamyon</CardDescription>
+            <CardTitle>Mavzu</CardTitle>
+            <CardDescription>Shu brauzerda saqlanadi</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-2">
-            {wallets.map((wallet) => (
-              <div key={wallet.id} className="flex items-center gap-3 rounded-lg border p-3">
-                <ColorIcon icon={wallet.icon} color={wallet.color} />
-                <div className="min-w-0">
-                  <p className="truncate font-medium">{wallet.name}</p>
-                  <p className="text-xs text-muted-foreground">{WALLET_KIND_LABELS[wallet.kind]}</p>
-                </div>
-              </div>
-            ))}
-            {wallets.length === 0 && <p className="text-sm text-muted-foreground">Hamyonlar yo&apos;q</p>}
+          <CardContent>
+            <ThemePicker />
           </CardContent>
         </Card>
-
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>Kategoriyalar</CardTitle>
-            <CardDescription>
-              {expenseCategories.length} ta chiqim, {incomeCategories.length} ta kirim
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <CategoryGroup title="Chiqim" items={expenseCategories} />
-            <CategoryGroup title="Kirim" items={incomeCategories} />
-          </CardContent>
-        </Card>
+        <AiCard ai={integrations.ai} />
+        <AutomationCard integrations={integrations} />
       </div>
     </>
   );
 }
 
-function CategoryGroup({
-  title,
-  items,
-}: {
-  title: string;
-  items: Awaited<ReturnType<typeof getSettingsOverview>>["categories"];
-}) {
-  if (items.length === 0) return null;
+function StatusBadge({ on, onText = "Ulangan", offText = "Ulanmagan" }: { on: boolean; onText?: string; offText?: string }) {
   return (
-    <div className="space-y-3">
-      <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">{title}</p>
-      <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
-        {items.map((category) => (
-          <div key={category.id} className="flex items-center gap-3 rounded-lg border p-2.5">
-            <ColorIcon icon={category.icon} color={category.color} className="size-8" />
-            <span className="min-w-0 flex-1 truncate text-sm font-medium">{category.name}</span>
-            {category.isSystem && (
-              <Badge variant="outline" className="text-[10px]">
-                tizim
-              </Badge>
-            )}
-          </div>
-        ))}
-      </div>
+    <Badge variant="outline" className={on ? "border-income/30 bg-income/10 text-income" : "border-debt/30 bg-debt/10 text-debt"}>
+      {on ? onText : offText}
+    </Badge>
+  );
+}
+
+function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div className="flex items-center justify-between gap-3 text-sm">
+      <span className="text-muted-foreground">{label}</span>
+      <span className="truncate font-medium">{value}</span>
     </div>
+  );
+}
+
+function AiCard({ ai }: { ai: SettingsOverview["integrations"]["ai"] }) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Sparkles className="size-4.5 text-primary" /> AI yordamchi
+        </CardTitle>
+        <CardDescription>Ma&apos;lumotlarni faqat o&apos;qiydi, faqat saytda ishlaydi</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <InfoRow label="Holati" value={<StatusBadge on={ai.configured} />} />
+        <InfoRow label="Model" value={<code className="font-mono text-xs">{ai.model}</code>} />
+        <InfoRow label="Saqlangan" value={`${ai.chats} ta suhbat, ${ai.insights} ta oylik tahlil`} />
+        {!ai.configured && (
+          <p className="rounded-lg bg-muted/50 p-2.5 text-xs text-muted-foreground">
+            Ulash: <code className="font-mono">.env.local</code> dagi <code className="font-mono">ANTHROPIC_API_KEY</code> ga Claude API
+            kalitini yozing.
+          </p>
+        )}
+        <ClearAiHistoryButton disabled={ai.chats + ai.insights === 0} />
+      </CardContent>
+    </Card>
+  );
+}
+
+function AutomationCard({ integrations }: { integrations: SettingsOverview["integrations"] }) {
+  const { bot, recurring } = integrations;
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Avtomatika</CardTitle>
+        <CardDescription>Telegram bot va har oy o&apos;zi yoziladigan to&apos;lovlar</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <div className="space-y-2 rounded-lg border p-3">
+          <div className="flex items-center justify-between gap-2">
+            <span className="flex items-center gap-2 text-sm font-medium">
+              <Bot className="size-4 text-muted-foreground" /> Telegram bot
+            </span>
+            <StatusBadge on={bot.configured} />
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {bot.configured
+              ? "Bot seansi xavfsizlik bo'limidagi seanslar ro'yxatida ko'rinadi."
+              : "TELEGRAM_BOT_TOKEN va TELEGRAM_ALLOWED_USER_ID .env.local faylida to'ldirilmagan."}
+          </p>
+        </div>
+
+        <Link
+          href="/kirim-chiqim/takroriy"
+          className="flex items-center gap-3 rounded-lg border p-3 transition-colors hover:bg-accent/50"
+        >
+          <Repeat className="size-4 shrink-0 text-muted-foreground" />
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-medium">Takroriy to&apos;lovlar</p>
+            <p className="truncate text-xs text-muted-foreground">
+              {recurring.active > 0
+                ? `${recurring.active} ta faol · oyiga ${formatMoney(recurring.monthlyExpense)} chiqim`
+                : "Ijara, internet, obunalar — hali qo'shilmagan"}
+            </p>
+          </div>
+          <ChevronRight className="size-4 text-muted-foreground" />
+        </Link>
+      </CardContent>
+    </Card>
   );
 }

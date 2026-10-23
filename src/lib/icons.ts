@@ -1,10 +1,18 @@
 import {
+  Baby,
   Banknote,
+  BookOpen,
   BriefcaseBusiness,
+  Bus,
   Car,
+  Cigarette,
   CirclePlus,
+  Coffee,
+  Coins,
   CreditCard,
+  Dumbbell,
   Ellipsis,
+  Fuel,
   Gamepad2,
   Gift,
   GraduationCap,
@@ -14,24 +22,40 @@ import {
   House,
   Landmark,
   Lightbulb,
+  PawPrint,
   PiggyBank,
+  Pill,
+  Pizza,
+  Plane,
   Receipt,
+  Scissors,
   Shirt,
   ShoppingBasket,
   Smartphone,
+  TrendingUp,
   UtensilsCrossed,
   Wallet,
+  Wifi,
+  Wrench,
   type LucideIcon,
 } from "lucide-react";
 
 /** Kategoriya va hamyonlar uchun tanlash mumkin bo'lgan ikonkalar (DB'da nomi saqlanadi) */
 export const ICONS = {
+  Baby,
   Banknote,
+  BookOpen,
   BriefcaseBusiness,
+  Bus,
   Car,
+  Cigarette,
   CirclePlus,
+  Coffee,
+  Coins,
   CreditCard,
+  Dumbbell,
   Ellipsis,
+  Fuel,
   Gamepad2,
   Gift,
   GraduationCap,
@@ -41,17 +65,29 @@ export const ICONS = {
   House,
   Landmark,
   Lightbulb,
+  PawPrint,
   PiggyBank,
+  Pill,
+  Pizza,
+  Plane,
   Receipt,
+  Scissors,
   Shirt,
   ShoppingBasket,
   Smartphone,
+  TrendingUp,
   UtensilsCrossed,
   Wallet,
+  Wifi,
+  Wrench,
 } satisfies Record<string, LucideIcon>;
 
 export type IconName = keyof typeof ICONS;
 
+export const ICON_NAMES = Object.keys(ICONS) as IconName[];
+
+export const isIconName = (name: string): name is IconName => Object.hasOwn(ICONS, name);
+
 export function getIcon(name: string): LucideIcon {
-  return ICONS[name as IconName] ?? Ellipsis;
+  return isIconName(name) ? ICONS[name] : Ellipsis;
 }
