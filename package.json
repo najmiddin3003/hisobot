@@ -13,7 +13,8 @@
     "reset-password": "tsx scripts/reset-password.ts",
     "reset-2fa": "tsx scripts/reset-2fa.ts",
     "bot:dev": "tsx --conditions=react-server scripts/bot-dev.ts",
-    "bot:webhook": "tsx scripts/bot-webhook.ts"
+    "bot:webhook": "tsx scripts/bot-webhook.ts",
+    "check-env": "tsx scripts/check-env.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.1.0",
