@@ -9,15 +9,9 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-sans);
   --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-sans);
-  --color-sidebar-ring: var(--sidebar-ring);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar: var(--sidebar);
+  /* Sarlavhalar va katta raqamlar — Fraunces (serif), matn — Geist */
+  --font-serif: var(--font-fraunces);
+  --font-heading: var(--font-fraunces);
   --color-chart-5: var(--chart-5);
   --color-chart-4: var(--chart-4);
   --color-chart-3: var(--chart-3);
@@ -44,9 +38,13 @@
   --color-expense: var(--expense);
   --color-debt: var(--debt);
   --color-receivable: var(--receivable);
-  /* Grafiklar uchun kirim/chiqim juftligi — rang ko'rlikka chidamli (validator: CVD ΔE ≥ 10) */
+  /* Grafiklar uchun kirim/chiqim juftligi — rang ko'rlikka chidamli (validator: hamma tekshiruvdan o'tgan) */
   --color-chart-income: var(--chart-income);
   --color-chart-expense: var(--chart-expense);
+  /* Bento bloklarining rangli turlari: bg-tile-olive va h.k. (to'liq uslub — tone-* utilitalarida) */
+  --color-tile-olive: var(--tile-olive);
+  --color-tile-clay: var(--tile-clay);
+  --color-tile-sand: var(--tile-sand);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -56,85 +54,145 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
+/* Yorug' mavzu: iliq qog'oz rangi, siyoh rangidagi matn */
 :root {
-  --background: oklch(0.982 0.003 264);
-  --foreground: oklch(0.18 0.02 264);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.18 0.02 264);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.18 0.02 264);
-  --primary: oklch(0.51 0.2 272);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.962 0.006 264);
-  --secondary-foreground: oklch(0.25 0.02 264);
-  --muted: oklch(0.962 0.006 264);
-  --muted-foreground: oklch(0.52 0.02 264);
-  --accent: oklch(0.955 0.012 272);
-  --accent-foreground: oklch(0.25 0.04 272);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.915 0.008 264);
-  --input: oklch(0.915 0.008 264);
-  --ring: oklch(0.62 0.15 272);
-  --income: oklch(0.6 0.15 158);
-  --expense: oklch(0.6 0.2 20);
-  --debt: oklch(0.68 0.16 65);
-  --receivable: oklch(0.6 0.14 240);
-  --chart-1: oklch(0.55 0.2 272);
-  --chart-2: oklch(0.65 0.15 160);
-  --chart-3: oklch(0.75 0.15 75);
-  --chart-4: oklch(0.63 0.2 15);
-  --chart-5: oklch(0.68 0.13 230);
-  --chart-income: #0d9488;
-  --chart-expense: #e11d48;
+  --background: #f4efe6;
+  --foreground: #221e18;
+  --card: #fffcf7;
+  --card-foreground: #221e18;
+  --popover: #fffcf7;
+  --popover-foreground: #221e18;
+  --primary: #221e18;
+  --primary-foreground: #f8f3ea;
+  --secondary: #ede6da;
+  --secondary-foreground: #2e2820;
+  --muted: #efe8dc;
+  --muted-foreground: #6b6152;
+  --accent: #efe7d9;
+  --accent-foreground: #221e18;
+  --destructive: #b4402a;
+  --border: #e5dccb;
+  --input: #dcd2bf;
+  --ring: #a08b6a;
+  --income: #007a6b;
+  --expense: #a65327;
+  --debt: #8f5f10;
+  --receivable: #356585;
+  --chart-1: #3f5a2e;
+  --chart-2: #008977;
+  --chart-3: #c35f36;
+  --chart-4: #b8862b;
+  --chart-5: #356585;
+  --chart-income: #008977;
+  --chart-expense: #c35f36;
   --radius: 0.75rem;
-  --sidebar: oklch(1 0 0);
-  --sidebar-foreground: oklch(0.3 0.02 264);
-  --sidebar-primary: oklch(0.51 0.2 272);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.955 0.018 272);
-  --sidebar-accent-foreground: oklch(0.42 0.17 272);
-  --sidebar-border: oklch(0.915 0.008 264);
-  --sidebar-ring: oklch(0.62 0.15 272);
+
+  --tile-olive: #2e3b24;
+  --tile-olive-foreground: #eef0e2;
+  --tile-olive-muted: #b9c2a3;
+  --tile-olive-income: #c8dda0;
+  --tile-olive-expense: #f2b39a;
+  --tile-clay: #ebd9c6;
+  --tile-clay-foreground: #5b2d12;
+  --tile-clay-muted: #7a4426;
+  --tile-sand: #f6e7cc;
+  --tile-sand-foreground: #5a4214;
+  --tile-sand-muted: #7a6332;
 }
 
+/* Qorong'i mavzu: iliq qora-jigarrang, qog'oz rangidagi matn */
 .dark {
-  --background: oklch(0.16 0.012 264);
-  --foreground: oklch(0.96 0.005 264);
-  --card: oklch(0.205 0.014 264);
-  --card-foreground: oklch(0.96 0.005 264);
-  --popover: oklch(0.22 0.014 264);
-  --popover-foreground: oklch(0.96 0.005 264);
-  --primary: oklch(0.6 0.18 272);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.26 0.014 264);
-  --secondary-foreground: oklch(0.96 0.005 264);
-  --muted: oklch(0.26 0.014 264);
-  --muted-foreground: oklch(0.7 0.015 264);
-  --accent: oklch(0.27 0.02 272);
-  --accent-foreground: oklch(0.96 0.005 264);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 9%);
-  --input: oklch(1 0 0 / 14%);
-  --ring: oklch(0.6 0.15 272);
-  --income: oklch(0.74 0.15 158);
-  --expense: oklch(0.7 0.18 20);
-  --debt: oklch(0.8 0.14 75);
-  --receivable: oklch(0.72 0.12 235);
-  --chart-1: oklch(0.66 0.17 272);
-  --chart-2: oklch(0.72 0.15 160);
-  --chart-3: oklch(0.8 0.14 75);
-  --chart-4: oklch(0.7 0.18 15);
-  --chart-5: oklch(0.74 0.12 230);
-  --chart-income: #0d9488;
-  --chart-expense: #f43f5e;
-  --sidebar: oklch(0.185 0.013 264);
-  --sidebar-foreground: oklch(0.85 0.01 264);
-  --sidebar-primary: oklch(0.6 0.18 272);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.27 0.03 272);
-  --sidebar-accent-foreground: oklch(0.86 0.08 272);
-  --sidebar-border: oklch(1 0 0 / 9%);
-  --sidebar-ring: oklch(0.6 0.15 272);
+  --background: #15120e;
+  --foreground: #f1eadc;
+  --card: #1e1a15;
+  --card-foreground: #f1eadc;
+  --popover: #231f19;
+  --popover-foreground: #f1eadc;
+  --primary: #f1eadc;
+  --primary-foreground: #1e1a15;
+  --secondary: #2a251e;
+  --secondary-foreground: #f1eadc;
+  --muted: #29241d;
+  --muted-foreground: #a89d8b;
+  --accent: #2c261f;
+  --accent-foreground: #f1eadc;
+  --destructive: #e07a5f;
+  --border: rgb(241 234 220 / 9%);
+  --input: rgb(241 234 220 / 14%);
+  --ring: #c9b48e;
+  --income: #3fb8a6;
+  --expense: #e58a62;
+  --debt: #e0b25c;
+  --receivable: #7fb2c9;
+  --chart-1: #a9c77f;
+  --chart-2: #1aa291;
+  --chart-3: #d76d42;
+  --chart-4: #d9a648;
+  --chart-5: #7fb2c9;
+  --chart-income: #1aa291;
+  --chart-expense: #d76d42;
+
+  --tile-olive: #27321f;
+  --tile-olive-foreground: #e6ecd4;
+  --tile-olive-muted: #a9b691;
+  --tile-olive-income: #c8dda0;
+  --tile-olive-expense: #f2b39a;
+  --tile-clay: #3a2a1f;
+  --tile-clay-foreground: #f2d3bc;
+  --tile-clay-muted: #c49a7e;
+  --tile-sand: #362c1c;
+  --tile-sand-foreground: #f0ddb0;
+  --tile-sand-muted: #bca673;
+}
+
+/*
+  Rangli bento bloklari. Ichidagi text-muted-foreground, bg-muted, border va tugmalar
+  o'z-o'zidan blok rangiga moslashadi — o'zgaruvchilar shu blok doirasida qayta belgilanadi.
+*/
+@utility tone-olive {
+  background-color: var(--tile-olive);
+  color: var(--tile-olive-foreground);
+  --foreground: var(--tile-olive-foreground);
+  --card-foreground: var(--tile-olive-foreground);
+  --muted-foreground: var(--tile-olive-muted);
+  --muted: color-mix(in oklab, var(--tile-olive-foreground) 12%, transparent);
+  --border: color-mix(in oklab, var(--tile-olive-foreground) 16%, transparent);
+  --input: color-mix(in oklab, var(--tile-olive-foreground) 24%, transparent);
+  --primary: var(--tile-olive-foreground);
+  --primary-foreground: var(--tile-olive);
+  --income: var(--tile-olive-income);
+  --expense: var(--tile-olive-expense);
+}
+
+@utility tone-clay {
+  background-color: var(--tile-clay);
+  color: var(--tile-clay-foreground);
+  --foreground: var(--tile-clay-foreground);
+  --card-foreground: var(--tile-clay-foreground);
+  --muted-foreground: var(--tile-clay-muted);
+  --muted: color-mix(in oklab, var(--tile-clay-foreground) 10%, transparent);
+  --border: color-mix(in oklab, var(--tile-clay-foreground) 14%, transparent);
+  --input: color-mix(in oklab, var(--tile-clay-foreground) 22%, transparent);
+}
+
+@utility tone-sand {
+  background-color: var(--tile-sand);
+  color: var(--tile-sand-foreground);
+  --foreground: var(--tile-sand-foreground);
+  --card-foreground: var(--tile-sand-foreground);
+  --muted-foreground: var(--tile-sand-muted);
+  --muted: color-mix(in oklab, var(--tile-sand-foreground) 10%, transparent);
+  --border: color-mix(in oklab, var(--tile-sand-foreground) 14%, transparent);
+  --input: color-mix(in oklab, var(--tile-sand-foreground) 22%, transparent);
+}
+
+/* Katta pul summalari: serif, raqamlar bir xil kenglikda va bir chiziqda */
+@utility money-display {
+  font-family: var(--font-fraunces);
+  font-variant-numeric: lining-nums tabular-nums;
+  font-weight: 500;
+  letter-spacing: -0.015em;
+  line-height: 1.1;
 }
 
 @layer base {
@@ -146,5 +204,9 @@
   }
   html {
     @apply font-sans;
+  }
+  ::selection {
+    background-color: var(--tile-sand);
+    color: var(--tile-sand-foreground);
   }
 }

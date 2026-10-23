@@ -1,31 +1,40 @@
 import { Suspense } from "react";
 import { AiAssistant } from "@/components/ai/assistant";
-import { AppSidebar } from "@/components/app-sidebar";
+import { AppHeader } from "@/components/app-header";
+import { BottomNav } from "@/components/bottom-nav";
+import { QuickAdd, QuickAddFallback } from "@/components/entries/quick-add";
 import { NavUserSkeleton } from "@/components/nav-user";
 import { SessionWatcher } from "@/components/session-watcher";
-import { SidebarUser } from "@/components/sidebar-user";
-import { TopBar } from "@/components/top-bar";
-import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import { UserMenu } from "@/components/user-menu";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
-    <SidebarProvider>
-      <AppSidebar
+    <div className="flex min-h-svh flex-col">
+      <AppHeader
+        quickAdd={
+          <Suspense fallback={<QuickAddFallback variant="pill" />}>
+            <QuickAdd variant="pill" />
+          </Suspense>
+        }
         userMenu={
           <Suspense fallback={<NavUserSkeleton />}>
-            <SidebarUser />
+            <UserMenu />
           </Suspense>
         }
       />
-      <SidebarInset>
-        <TopBar />
-        {/* Pastdagi joy — AI tugmasi oxirgi blokni yopib qo'ymasligi uchun */}
-        <main className="flex-1 p-4 pb-20 md:p-6 md:pb-24 lg:p-8 lg:pb-24">
-          <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">{children}</div>
-        </main>
-      </SidebarInset>
+      {/* Pastdagi joy — telefonda pastki panel, kompyuterda AI tugmasi oxirgi blokni yopib qo'ymasligi uchun */}
+      <main className="flex-1 px-4 pt-6 pb-28 md:px-6 lg:px-8 lg:pt-8 lg:pb-24">
+        <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">{children}</div>
+      </main>
+      <BottomNav
+        quickAdd={
+          <Suspense fallback={<QuickAddFallback variant="fab" />}>
+            <QuickAdd variant="fab" />
+          </Suspense>
+        }
+      />
       <SessionWatcher />
       <AiAssistant />
-    </SidebarProvider>
+    </div>
   );
 }

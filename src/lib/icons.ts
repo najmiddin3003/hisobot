@@ -23,7 +23,6 @@ import {
   Landmark,
   Lightbulb,
   PawPrint,
-  PiggyBank,
   Pill,
   Pizza,
   Plane,
@@ -34,6 +33,7 @@ import {
   Smartphone,
   TrendingUp,
   UtensilsCrossed,
+  Vault,
   Wallet,
   Wifi,
   Wrench,
@@ -66,7 +66,6 @@ export const ICONS = {
   Landmark,
   Lightbulb,
   PawPrint,
-  PiggyBank,
   Pill,
   Pizza,
   Plane,
@@ -77,6 +76,7 @@ export const ICONS = {
   Smartphone,
   TrendingUp,
   UtensilsCrossed,
+  Vault,
   Wallet,
   Wifi,
   Wrench,
@@ -88,6 +88,10 @@ export const ICON_NAMES = Object.keys(ICONS) as IconName[];
 
 export const isIconName = (name: string): name is IconName => Object.hasOwn(ICONS, name);
 
+/** Ro'yxatdan olib tashlangan, lekin bazada qolgan bo'lishi mumkin bo'lgan nomlar */
+const RENAMED: Record<string, IconName> = { PiggyBank: "Vault" };
+
 export function getIcon(name: string): LucideIcon {
-  return isIconName(name) ? ICONS[name] : Ellipsis;
+  if (isIconName(name)) return ICONS[name];
+  return name in RENAMED ? ICONS[RENAMED[name]] : Ellipsis;
 }

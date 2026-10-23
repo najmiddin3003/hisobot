@@ -24,7 +24,7 @@ import { purgeEntry, restoreEntry } from "../actions";
 export function TrashView({ entries }: { entries: Entry[] }) {
   if (entries.length === 0) {
     return (
-      <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed p-10 text-center">
+      <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed p-10 text-center">
         <div className="flex size-11 items-center justify-center rounded-full bg-muted text-muted-foreground">
           <Trash2 className="size-5" />
         </div>

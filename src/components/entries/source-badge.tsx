@@ -17,7 +17,7 @@ export function SourceBadge({ source, className }: { source: Source; className?:
     <span
       title={telegram ? "Telegram botdan kiritilgan" : "Takroriy to'lov — avtomatik qo'shilgan"}
       className={cn(
-        "inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-medium",
+        "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium",
         telegram ? "bg-receivable/10 text-receivable" : "bg-primary/10 text-primary",
         className,
       )}

@@ -58,9 +58,13 @@ export function MonthPicker() {
         }}
       >
         <PopoverTrigger asChild>
-          <Button variant="outline" className="min-w-36 justify-center gap-2 font-medium">
-            <CalendarDays className="text-muted-foreground" />
-            {monthLabel(selected)}
+          <Button variant="outline" className="justify-center gap-2 font-medium sm:min-w-36">
+            <CalendarDays className="hidden text-muted-foreground sm:block" />
+            {/* Telefonda joy tor: "Okt 2026" */}
+            <span className="sm:hidden">
+              {MONTH_NAMES[Number(selected.slice(5)) - 1].slice(0, 3)} {selected.slice(0, 4)}
+            </span>
+            <span className="hidden sm:inline">{monthLabel(selected)}</span>
           </Button>
         </PopoverTrigger>
         <PopoverContent align="end" className="w-72">
@@ -135,5 +139,5 @@ export function MonthPicker() {
 export function MonthPickerFallback() {
   const pathname = usePathname();
   if (!isMonthlyPage(pathname)) return null;
-  return <Skeleton className="h-8 w-56 rounded-lg" />;
+  return <Skeleton className="h-8 w-40 rounded-full sm:w-56" />;
 }

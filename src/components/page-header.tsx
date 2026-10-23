@@ -20,8 +20,8 @@ export function PageHeader({
       <Suspense fallback={null}>
         <AuthCheck />
       </Suspense>
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
+      <div className="space-y-1.5">
+        <h1 className="font-heading text-3xl font-medium tracking-[-0.02em] sm:text-4xl">{title}</h1>
         {description && <p className="text-sm text-muted-foreground">{description}</p>}
       </div>
       {children && <div className="flex shrink-0 items-center gap-2">{children}</div>}

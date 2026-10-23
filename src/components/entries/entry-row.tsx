@@ -64,7 +64,7 @@ export function EntryRow({
   );
 
   const debtBadge = isTx && entry.debtId && (
-    <span className="inline-flex shrink-0 items-center gap-1 rounded-md bg-debt/10 px-1.5 py-0.5 text-[11px] font-medium text-debt">
+    <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-debt/10 px-2 py-0.5 text-[11px] font-medium text-debt">
       <HandCoins className="size-3" /> Qarz
     </span>
   );

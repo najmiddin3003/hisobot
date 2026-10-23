@@ -61,16 +61,16 @@ export function EntryFilterBar({
 
   return (
     <div className="flex flex-col gap-3 xl:flex-row xl:items-center">
-      <div className="flex shrink-0 gap-1 overflow-x-auto rounded-lg bg-muted p-1">
+      <div className="flex shrink-0 gap-1 overflow-x-auto rounded-full bg-muted p-1">
         {TYPE_TABS.map((tab) => (
           <button
             key={tab.label}
             type="button"
             onClick={() => update({ type: tab.value, categoryId: tab.value === "otkazma" ? undefined : filters.categoryId })}
             className={cn(
-              "shrink-0 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+              "shrink-0 rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors",
               filters.type === tab.value
-                ? "bg-background text-foreground shadow-sm"
+                ? "bg-card text-foreground shadow-sm"
                 : "text-muted-foreground hover:text-foreground",
             )}
           >

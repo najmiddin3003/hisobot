@@ -26,7 +26,7 @@ export function CategoryBreakdown({ data, className }: { data: Dashboard; classN
           {data.monthLabel} · jami {formatMoney(data.expense.value)}
         </CardDescription>
         <CardAction>
-          <Link href="/kirim-chiqim?tur=chiqim" className="text-sm font-medium text-primary hover:underline">
+          <Link href="/kirim-chiqim?tur=chiqim" className="text-sm font-medium underline-offset-4 hover:underline">
             Barchasi
           </Link>
         </CardAction>
@@ -53,7 +53,7 @@ export function CategoryBreakdown({ data, className }: { data: Dashboard; classN
                   </div>
                   <div className="flex items-center gap-2">
                     {/* Bitta rang (chiqim) — uzunlik miqdorni bildiradi; kategoriya ikonkasi o'z rangida */}
-                    <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
+                    <div className="h-2 flex-1 overflow-hidden rounded-full bg-muted">
                       <div
                         className="h-full rounded-full bg-chart-expense"
                         style={{ width: `${max > 0 ? (row.amount / max) * 100 : 0}%` }}

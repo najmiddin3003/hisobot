@@ -14,18 +14,19 @@ const TABS = [
 export function SubNav() {
   const pathname = usePathname();
   return (
-    <nav className="-mt-2 flex gap-1 overflow-x-auto border-b">
+    <nav className="-mt-1 flex gap-1 overflow-x-auto">
       {TABS.map((tab) => {
         const active = pathname === tab.href;
         return (
           <Link
             key={tab.href}
             href={tab.href}
+            aria-current={active ? "page" : undefined}
             className={cn(
-              "-mb-px flex shrink-0 items-center gap-2 border-b-2 px-3 py-2.5 text-sm font-medium transition-colors",
+              "flex shrink-0 items-center gap-2 rounded-full border px-3.5 py-1.5 text-sm font-medium transition-colors",
               active
-                ? "border-primary text-foreground"
-                : "border-transparent text-muted-foreground hover:text-foreground",
+                ? "border-primary bg-primary text-primary-foreground"
+                : "border-input text-muted-foreground hover:bg-muted hover:text-foreground",
             )}
           >
             <tab.icon className="size-4" />

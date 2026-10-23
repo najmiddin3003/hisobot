@@ -11,10 +11,10 @@ export default function RecurringPage() {
     <Suspense
       fallback={
         <div className="space-y-4">
-          <Skeleton className="h-16 rounded-xl" />
+          <Skeleton className="h-16 rounded-2xl" />
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {[0, 1, 2].map((i) => (
-              <Skeleton key={i} className="h-40 rounded-xl" />
+              <Skeleton key={i} className="h-40 rounded-2xl" />
             ))}
           </div>
         </div>

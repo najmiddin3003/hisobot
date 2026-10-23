@@ -20,9 +20,9 @@ import { cn } from "@/lib/utils";
 import { clearAiHistory } from "./catalog-actions";
 
 const THEMES: { value: string; label: string; icon: LucideIcon; preview: string }[] = [
-  { value: "light", label: "Yorug'", icon: Sun, preview: "bg-white" },
-  { value: "dark", label: "Qorong'i", icon: Moon, preview: "bg-zinc-900" },
-  { value: "system", label: "Tizim bo'yicha", icon: Monitor, preview: "bg-linear-to-r from-white from-50% to-zinc-900 to-50%" },
+  { value: "light", label: "Yorug'", icon: Sun, preview: "bg-[#f4efe6]" },
+  { value: "dark", label: "Qorong'i", icon: Moon, preview: "bg-[#15120e]" },
+  { value: "system", label: "Tizim bo'yicha", icon: Monitor, preview: "bg-linear-to-r from-[#f4efe6] from-50% to-[#15120e] to-50%" },
 ];
 
 const noop = () => () => {};
@@ -49,10 +49,10 @@ export function ThemePicker() {
               selected && "border-primary ring-2 ring-primary/30",
             )}
           >
-            <div className={cn("relative h-16 overflow-hidden rounded-lg border", t.preview)}>
-              <div className="absolute top-2 left-2 h-1.5 w-8 rounded-full bg-zinc-400/60" />
-              <div className="absolute top-5 left-2 h-1.5 w-12 rounded-full bg-zinc-400/40" />
-              <div className="absolute right-2 bottom-2 size-4 rounded-full bg-primary" />
+            <div className={cn("relative h-16 overflow-hidden rounded-xl border", t.preview)}>
+              <div className="absolute top-2 left-2 h-1.5 w-8 rounded-full bg-stone-400/60" />
+              <div className="absolute top-5 left-2 h-1.5 w-12 rounded-full bg-stone-400/40" />
+              <div className="absolute right-2 bottom-2 size-4 rounded-full bg-[#c35f36]" />
             </div>
             {/* Tor ustunda ham nomi to'liq ko'rinsin: ikonka va nom ustma-ust */}
             <span className="flex flex-col items-center gap-1 text-center text-xs font-medium sm:text-sm">

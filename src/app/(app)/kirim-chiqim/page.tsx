@@ -38,7 +38,7 @@ function EntriesSkeleton() {
   return (
     <div className="space-y-6">
       <div className="grid gap-4 lg:grid-cols-[1fr_auto]">
-        <Skeleton className="h-24 rounded-xl" />
+        <Skeleton className="h-24 rounded-2xl" />
         <div className="grid grid-cols-3 gap-2 lg:w-44 lg:grid-cols-1">
           {[0, 1, 2].map((i) => (
             <Skeleton key={i} className="h-9 rounded-lg" />
@@ -52,7 +52,7 @@ function EntriesSkeleton() {
           <CardContent className="space-y-4 py-4">
             {[0, 1, 2].map((i) => (
               <div key={i} className="flex items-center gap-3">
-                <Skeleton className="size-10 rounded-xl" />
+                <Skeleton className="size-10 rounded-2xl" />
                 <div className="flex-1 space-y-2">
                   <Skeleton className="h-4 w-1/3" />
                   <Skeleton className="h-3 w-1/4" />

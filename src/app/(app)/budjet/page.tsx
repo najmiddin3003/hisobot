@@ -25,15 +25,15 @@ async function BudgetContent() {
 function BudgetSkeleton() {
   return (
     <div className="space-y-6">
-      <Skeleton className="h-64 rounded-xl" />
+      <Skeleton className="h-64 rounded-2xl" />
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {[0, 1, 2].map((i) => (
-          <Skeleton key={i} className="h-44 rounded-xl" />
+          <Skeleton key={i} className="h-44 rounded-2xl" />
         ))}
       </div>
       <div className="grid gap-6 lg:grid-cols-5">
-        <Skeleton className="h-80 rounded-xl lg:col-span-3" />
-        <Skeleton className="h-80 rounded-xl lg:col-span-2" />
+        <Skeleton className="h-80 rounded-2xl lg:col-span-3" />
+        <Skeleton className="h-80 rounded-2xl lg:col-span-2" />
       </div>
     </div>
   );

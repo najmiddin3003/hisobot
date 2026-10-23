@@ -28,7 +28,7 @@ function Segmented<T extends string>({
   disabled?: boolean;
 }) {
   return (
-    <div className={cn("grid gap-1 rounded-lg bg-muted p-1", disabled && "opacity-60")} style={{ gridTemplateColumns: `repeat(${options.length}, 1fr)` }}>
+    <div className={cn("grid gap-1 rounded-full bg-muted p-1", disabled && "opacity-60")} style={{ gridTemplateColumns: `repeat(${options.length}, 1fr)` }}>
       {options.map((o) => (
         <button
           key={o.value}
@@ -36,8 +36,8 @@ function Segmented<T extends string>({
           disabled={disabled}
           onClick={() => onChange(o.value)}
           className={cn(
-            "rounded-md px-3 py-1.5 text-sm font-medium transition-colors disabled:cursor-not-allowed",
-            value === o.value ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
+            "rounded-full px-3 py-1.5 text-sm font-medium transition-colors disabled:cursor-not-allowed",
+            value === o.value ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
           )}
         >
           {o.label}

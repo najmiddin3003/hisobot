@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowDownRight, ArrowLeftRight, ArrowUpRight, Banknote, Info, PiggyBank, SlidersHorizontal } from "lucide-react";
+import { ArrowDownRight, ArrowLeftRight, ArrowUpRight, Banknote, Info, SlidersHorizontal, WalletCards } from "lucide-react";
 import { ColorIcon } from "@/components/color-icon";
+import { Money } from "@/components/money";
 import { EntryEditorProvider, useEntryEditor } from "@/components/entries/entry-editor";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -54,7 +55,7 @@ function BudgetBody({ data }: { data: BudgetOverview }) {
       <TotalCard data={data} onSalary={openSalary} onTransfer={() => editor.openNew("otkazma")} />
 
       <section className="space-y-3">
-        <h2 className="text-sm font-semibold tracking-wide text-muted-foreground uppercase">Hamyonlar</h2>
+        <h2 className="font-heading text-xl font-medium">Hamyonlar</h2>
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {data.wallets.map((wallet) => (
             <WalletCard
@@ -98,7 +99,7 @@ function ChangeBadge({ value, delta }: { value: number | null; delta: number }) 
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-0.5 rounded-md px-1.5 py-0.5 text-xs font-medium tabular-nums",
+        "inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-xs font-medium tabular-nums",
         up ? "bg-income/10 text-income" : "bg-expense/10 text-expense",
       )}
     >
@@ -121,23 +122,21 @@ function TotalCard({
   const positiveTotal = positive.reduce((sum, w) => sum + w.balance, 0);
 
   return (
-    <Card>
-      <CardContent className="space-y-6">
+    <Card tone="olive" className="py-6">
+      <CardContent className="space-y-6 px-6">
         <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
           <div className="min-w-0 space-y-2">
             <p className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-              <PiggyBank className="size-4" /> Jami budjet — barcha hamyonlardagi pul
+              <WalletCards className="size-4" /> Jami budjet — barcha hamyonlardagi pul
             </p>
-            <p className={cn("text-4xl font-semibold tracking-tight sm:text-5xl", data.total < 0 && "text-expense")}>
-              {formatMoney(data.total)}
-            </p>
+            <Money amount={data.total} className={cn("block text-[2.75rem] sm:text-6xl", data.total < 0 && "text-expense")} />
             <p className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
               <ChangeBadge value={data.monthChange} delta={data.total - data.monthStartTotal} />
               <span>oy boshidan beri ({formatMoney(data.monthStartTotal)} edi)</span>
             </p>
           </div>
           <div className="grid shrink-0 grid-cols-2 gap-2 md:w-52 md:grid-cols-1">
-            <Button className="bg-income text-white hover:bg-income/85" onClick={onSalary}>
+            <Button onClick={onSalary}>
               <Banknote /> Oylik kiritish
             </Button>
             <Button variant="outline" onClick={onTransfer}>
@@ -176,7 +175,7 @@ function TotalCard({
             { label: "Bu oy kirim", value: formatMoney(data.monthIncome, { sign: true }), className: "text-income" },
             { label: "Bu oy chiqim", value: formatMoney(-data.monthExpense), className: "text-expense" },
           ].map((item) => (
-            <div key={item.label} className="min-w-0 rounded-lg bg-muted/50 p-3">
+            <div key={item.label} className="min-w-0 rounded-xl bg-muted p-3">
               <p className="text-xs text-muted-foreground">{item.label}</p>
               <p className={cn("mt-1 truncate text-sm font-semibold sm:text-base", item.className)} title={item.value}>
                 {item.value}
@@ -211,9 +210,7 @@ function WalletCard({
           </div>
           {share > 0 && <span className="text-xs font-medium text-muted-foreground">{share}%</span>}
         </div>
-        <p className={cn("text-2xl font-semibold tracking-tight", wallet.balance < 0 && "text-expense")}>
-          {formatMoney(wallet.balance)}
-        </p>
+        <Money amount={wallet.balance} className={cn("block truncate text-[1.75rem]", wallet.balance < 0 && "text-expense")} />
         <div className="flex gap-3 text-xs">
           <span className="text-income">+{formatMoney(wallet.monthIn)}</span>
           <span className="text-expense">−{formatMoney(wallet.monthOut)}</span>

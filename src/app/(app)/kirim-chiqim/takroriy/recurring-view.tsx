@@ -5,6 +5,7 @@ import { CalendarClock, CircleAlert, Loader2, Minus, Pencil, Plus, Repeat, Trash
 import { toast } from "sonner";
 import { ColorIcon } from "@/components/color-icon";
 import { AmountInput } from "@/components/entries/amount-input";
+import { Money } from "@/components/money";
 import { CategoryPicker, WalletPicker } from "@/components/entries/option-pickers";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
@@ -81,7 +82,7 @@ export function RecurringView({ items, options }: { items: RecurringItem[]; opti
           ))}
         </div>
       ) : (
-        <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed p-10 text-center">
+        <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed p-10 text-center">
           <div className="flex size-11 items-center justify-center rounded-full bg-primary/10 text-primary">
             <CalendarClock className="size-5" />
           </div>
@@ -147,9 +148,11 @@ function RecurringCard({ item, onEdit }: { item: RecurringItem; onEdit: () => vo
           />
         </div>
 
-        <p className={cn("text-2xl font-semibold tabular-nums", item.type === "kirim" ? "text-income" : "text-expense")}>
-          {formatMoney(item.type === "kirim" ? item.amount : -item.amount, { sign: true })}
-        </p>
+        <Money
+          amount={item.type === "kirim" ? item.amount : -item.amount}
+          sign
+          className={cn("block truncate text-[1.75rem]", item.type === "kirim" ? "text-income" : "text-expense")}
+        />
 
         <div className="flex items-center justify-between gap-2 rounded-lg bg-muted/50 px-3 py-2 text-xs">
           <span className="text-muted-foreground">Har oyning {item.dayOfMonth}-kuni</span>
@@ -240,18 +243,18 @@ function RecurringForm({
         <DialogDescription>Har oy tanlangan kunda kirim-chiqimga avtomatik yoziladi</DialogDescription>
       </DialogHeader>
 
-      <div className="grid grid-cols-2 gap-1 rounded-xl bg-muted p-1">
+      <div className="grid grid-cols-2 gap-1 rounded-full bg-muted p-1">
         {(["chiqim", "kirim"] as const).map((t) => (
           <button
             key={t}
             type="button"
             onClick={() => changeType(t)}
             className={cn(
-              "flex items-center justify-center gap-1.5 rounded-lg py-2 text-sm font-medium transition-colors",
+              "flex items-center justify-center gap-1.5 rounded-full py-2 text-sm font-medium transition-colors",
               type === t
                 ? t === "chiqim"
-                  ? "bg-expense text-white"
-                  : "bg-income text-white"
+                  ? "bg-expense text-primary-foreground"
+                  : "bg-income text-primary-foreground"
                 : "text-muted-foreground hover:text-foreground",
             )}
           >

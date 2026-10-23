@@ -3,6 +3,7 @@
 import { createElement } from "react";
 import { CalendarClock, CircleCheck, HandCoins, Handshake, Landmark, TriangleAlert } from "lucide-react";
 import { DEBT_TEXT } from "@/components/debts/debt-text";
+import { Money } from "@/components/money";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import type { DebtItem } from "@/lib/data/debts";
@@ -73,11 +74,11 @@ export function DebtCard({ debt, onOpen, onPay }: { debt: DebtItem; onOpen: () =
             </p>
           </div>
           {debt.closed ? (
-            <span className="inline-flex shrink-0 items-center gap-1 rounded-md bg-income/10 px-1.5 py-0.5 text-xs font-medium text-income">
+            <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-income/10 px-2 py-0.5 text-xs font-medium text-income">
               <CircleCheck className="size-3.5" /> Yopilgan
             </span>
           ) : debt.overdue ? (
-            <span className="inline-flex shrink-0 items-center gap-1 rounded-md bg-expense/10 px-1.5 py-0.5 text-xs font-medium text-expense">
+            <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-expense/10 px-2 py-0.5 text-xs font-medium text-expense">
               <TriangleAlert className="size-3.5" /> Muddati o&apos;tgan
             </span>
           ) : null}
@@ -85,7 +86,7 @@ export function DebtCard({ debt, onOpen, onPay }: { debt: DebtItem; onOpen: () =
 
         <div>
           <p className="text-xs text-muted-foreground">{debt.closed ? "Jami" : text.remainingLabel}</p>
-          <p className="text-2xl font-semibold tracking-tight">{formatMoney(debt.closed ? debt.total : debt.remaining)}</p>
+          <Money amount={debt.closed ? debt.total : debt.remaining} className="block truncate text-[1.75rem]" />
         </div>
 
         <DebtProgress debt={debt} />

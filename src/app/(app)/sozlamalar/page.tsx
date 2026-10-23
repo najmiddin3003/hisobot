@@ -36,8 +36,8 @@ export default function SettingsPage() {
 
 function SectionTitle({ icon: Icon, title }: { icon: LucideIcon; title: string }) {
   return (
-    <h2 className="-mb-2 flex items-center gap-2 text-sm font-semibold tracking-wide text-muted-foreground uppercase">
-      <Icon className="size-4" /> {title}
+    <h2 className="-mb-2 flex items-center gap-2.5 pt-2 font-heading text-xl font-medium">
+      <Icon className="size-4.5 text-muted-foreground" /> {title}
     </h2>
   );
 }
@@ -55,7 +55,7 @@ function SettingsSkeleton() {
       <SectionTitle icon={Palette} title="Ko'rinish va xizmatlar" />
       <div className="grid gap-6 lg:grid-cols-3">
         {[0, 1, 2].map((i) => (
-          <Skeleton key={i} className="h-56 rounded-xl" />
+          <Skeleton key={i} className="h-56 rounded-2xl" />
         ))}
       </div>
     </>

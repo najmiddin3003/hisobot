@@ -28,7 +28,15 @@ export function TrendChart({ trend }: { trend: Point[] }) {
       <ChartContainer config={config} className="aspect-auto h-64 w-full">
         <BarChart data={trend} margin={{ top: 8, right: 8, left: 0, bottom: 0 }} barGap={2} barCategoryGap="20%">
           <CartesianGrid vertical={false} />
-          <XAxis dataKey="short" tickLine={false} axisLine={false} tickMargin={8} interval={0} fontSize={11} />
+          <XAxis
+            dataKey="short"
+            tickLine={false}
+            axisLine={false}
+            tickMargin={8}
+            interval="preserveStartEnd"
+            minTickGap={6}
+            fontSize={11}
+          />
           <YAxis tickLine={false} axisLine={false} width={76} tickFormatter={(v: number) => formatCompact(v)} />
           <ChartTooltip
             cursor={{ fill: "var(--muted)", opacity: 0.5 }}

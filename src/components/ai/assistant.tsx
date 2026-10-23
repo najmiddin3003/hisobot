@@ -79,7 +79,7 @@ export function AiAssistant() {
           <Button
             size="icon"
             onClick={() => show(true)}
-            className="fixed right-4 bottom-4 z-40 size-12 rounded-full shadow-lg shadow-primary/25 md:right-6 md:bottom-6"
+            className="fixed right-6 bottom-6 z-40 hidden size-12 rounded-full shadow-lg shadow-black/20 lg:inline-flex"
             aria-label="AI yordamchi"
           >
             {chat.busy ? <Loader2 className="size-5 animate-spin" /> : <Sparkles className="size-5" />}
@@ -337,7 +337,7 @@ function BotTurn({ turn }: { turn: UiTurn }) {
               return (
                 <span
                   key={label}
-                  className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-0.5 text-[11px] text-muted-foreground"
+                  className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground"
                 >
                   {active ? <Loader2 className="size-3 animate-spin" /> : <Database className="size-3" />}
                   {label}

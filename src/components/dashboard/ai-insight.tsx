@@ -4,10 +4,10 @@ import { useState } from "react";
 import {
   AlertTriangle,
   CheckCircle2,
+  Coins,
   KeyRound,
   Loader2,
   MessageSquareText,
-  PiggyBank,
   RefreshCw,
   Scissors,
   Sparkles,
@@ -82,10 +82,10 @@ export function AiInsightCard({
   };
 
   return (
-    <Card className={cn("gap-4", className)}>
+    <Card tone="sand" className={cn("gap-4", className)}>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Sparkles className="size-4 text-primary" /> AI tahlil
+          <Sparkles className="size-4" /> AI tahlil
         </CardTitle>
         <CardDescription>
           {insight ? `${formatDateTime(new Date(insight.generatedAt))} holatiga` : `${monthLabel} bo'yicha maslahatlar`}
@@ -226,7 +226,7 @@ function InsightView({ insight, changed, monthLabel }: { insight: Insight; chang
           )}
           {insight.tips.map((tip, i) => (
             <div key={i} className="flex gap-2.5 rounded-lg bg-muted/40 px-3 py-2.5">
-              <PiggyBank className="mt-0.5 size-4 shrink-0 text-income" />
+              <Coins className="mt-0.5 size-4 shrink-0 text-income" />
               <div className="min-w-0 flex-1 space-y-0.5">
                 <div className="flex items-baseline justify-between gap-2">
                   <p className="text-sm font-medium">{tip.title}</p>

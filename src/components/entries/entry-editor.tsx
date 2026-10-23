@@ -97,8 +97,8 @@ export function EntryEditorProvider({ options, children }: { options: EntryOptio
 }
 
 const KIND_META: Record<EntryKind, { label: string; icon: typeof Plus; active: string }> = {
-  chiqim: { label: "Chiqim", icon: Minus, active: "bg-expense text-white" },
-  kirim: { label: "Kirim", icon: Plus, active: "bg-income text-white" },
+  chiqim: { label: "Chiqim", icon: Minus, active: "bg-expense text-primary-foreground" },
+  kirim: { label: "Kirim", icon: Plus, active: "bg-income text-primary-foreground" },
   otkazma: { label: "O'tkazma", icon: ArrowLeftRight, active: "bg-primary text-primary-foreground" },
 };
 
@@ -222,7 +222,7 @@ function EntryForm({ payload, options, onDone }: { payload: Payload; options: En
       </DialogHeader>
 
       {kinds.length > 1 && (
-        <div className="grid gap-1 rounded-xl bg-muted p-1" style={{ gridTemplateColumns: `repeat(${kinds.length}, 1fr)` }}>
+        <div className="grid gap-1 rounded-full bg-muted p-1" style={{ gridTemplateColumns: `repeat(${kinds.length}, 1fr)` }}>
           {kinds.map((k) => {
             const meta = KIND_META[k];
             return (
@@ -231,7 +231,7 @@ function EntryForm({ payload, options, onDone }: { payload: Payload; options: En
                 type="button"
                 onClick={() => changeKind(k)}
                 className={cn(
-                  "flex items-center justify-center gap-1.5 rounded-lg py-2 text-sm font-medium transition-colors",
+                  "flex items-center justify-center gap-1.5 rounded-full py-2 text-sm font-medium transition-colors",
                   kind === k ? meta.active : "text-muted-foreground hover:text-foreground",
                 )}
               >

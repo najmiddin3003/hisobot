@@ -146,7 +146,7 @@ Vercel kodni GitHub'dan oladi. GitHub'da **private** repozitoriya yarating va ko
 
 ## Tuzilma
 
-- `src/app/(app)/` — sidebar ichidagi sahifalar: Dashboard (`/`), Kirim-chiqim, Budjet, Qarzlar, Xaq, Sozlamalar
+- `src/app/(app)/` — ilova sahifalari (kompyuterda yuqori menyu, telefonda pastki panel): Dashboard (`/`), Kirim-chiqim, Budjet, Qarzlar, Xaq, Sozlamalar
 - `src/lib/models/` — MongoDB modellari
 - `src/lib/data/` — sahifalar uchun bazadan o'qish (faqat serverda)
 - `src/lib/ai/` — AI yordamchi: vositalar (faqat o'qish), prompt, suhbat sikli, oylik tahlil

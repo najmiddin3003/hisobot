@@ -111,7 +111,7 @@ export function DebtForm({
       </DialogHeader>
 
       {!debt && direction === "olingan" && (
-        <div className="grid grid-cols-2 gap-1 rounded-xl bg-muted p-1">
+        <div className="grid grid-cols-2 gap-1 rounded-full bg-muted p-1">
           {(
             [
               ["shaxs", "Odamdan", HandCoins],
@@ -123,8 +123,8 @@ export function DebtForm({
               type="button"
               onClick={() => setKind(value)}
               className={cn(
-                "flex items-center justify-center gap-1.5 rounded-lg py-2 text-sm font-medium transition-colors",
-                kind === value ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
+                "flex items-center justify-center gap-1.5 rounded-full py-2 text-sm font-medium transition-colors",
+                kind === value ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
               )}
             >
               <Icon className="size-4" /> {label}

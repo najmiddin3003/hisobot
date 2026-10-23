@@ -133,8 +133,8 @@ export function SecuritySectionSkeleton() {
         </CardContent>
       </Card>
       <div className="flex flex-col gap-6">
-        <Skeleton className="h-52 rounded-xl" />
-        <Skeleton className="h-80 rounded-xl" />
+        <Skeleton className="h-52 rounded-2xl" />
+        <Skeleton className="h-80 rounded-2xl" />
       </div>
     </div>
   );

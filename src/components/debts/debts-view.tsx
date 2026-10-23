@@ -1,10 +1,12 @@
 "use client";
 
 import { useRef, useState } from "react";
+import Link from "next/link";
 import { CalendarClock, ChevronDown, HandCoins, Handshake, Landmark, Plus, TriangleAlert, Users } from "lucide-react";
 import { DebtCard } from "@/components/debts/debt-card";
 import { DebtDetails } from "@/components/debts/debt-details";
 import { DebtForm } from "@/components/debts/debt-form";
+import { Money } from "@/components/money";
 import { StatCard } from "@/components/stat-card";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -45,6 +47,7 @@ export function DebtsView({ direction, data }: { direction: DebtDirection; data:
 
   return (
     <div className="space-y-8">
+      <DebtSwitch direction={direction} />
       <Summary direction={direction} items={openItems} />
 
       <div className="flex flex-wrap gap-2">
@@ -52,7 +55,7 @@ export function DebtsView({ direction, data }: { direction: DebtDirection; data:
           <Button
             key={s.kind}
             onClick={() => newDebt(s.kind)}
-            className={direction === "olingan" ? "bg-debt text-white hover:bg-debt/85" : "bg-receivable text-white hover:bg-receivable/85"}
+            className={direction === "olingan" ? "bg-debt text-primary-foreground hover:bg-debt/85" : "bg-receivable text-primary-foreground hover:bg-receivable/85"}
           >
             <Plus /> {s.add}
           </Button>
@@ -63,9 +66,9 @@ export function DebtsView({ direction, data }: { direction: DebtDirection; data:
         const items = openItems.filter((d) => d.kind === section.kind);
         return (
           <section key={section.kind} className="space-y-3">
-            <h2 className="flex items-center gap-2 text-sm font-semibold tracking-wide text-muted-foreground uppercase">
-              <section.icon className="size-4" /> {section.title}
-              <span className="font-normal normal-case">· {items.length} ta ochiq</span>
+            <h2 className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1 font-heading text-xl font-medium">
+              <section.icon className="size-4.5 self-center text-muted-foreground" /> {section.title}
+              <span className="font-sans text-sm font-normal text-muted-foreground">{items.length} ta ochiq</span>
             </h2>
             {items.length > 0 ? (
               <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
@@ -77,7 +80,7 @@ export function DebtsView({ direction, data }: { direction: DebtDirection; data:
               <button
                 type="button"
                 onClick={() => newDebt(section.kind)}
-                className="flex w-full flex-col items-center gap-2 rounded-xl border border-dashed p-8 text-center text-sm text-muted-foreground transition-colors hover:bg-muted/40"
+                className="flex w-full flex-col items-center gap-2 rounded-2xl border border-dashed p-8 text-center text-sm text-muted-foreground transition-colors hover:bg-muted/40"
               >
                 <section.icon className="size-6" />
                 {section.kind === "kredit"
@@ -152,7 +155,8 @@ function Summary({ direction, items }: { direction: DebtDirection; items: DebtIt
     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
       <StatCard
         label={direction === "olingan" ? "Qaytarishim kerak" : "Menga qaytarishi kerak"}
-        value={formatMoney(remaining)}
+        value={<Money amount={remaining} />}
+        surface={direction === "olingan" ? "clay" : "sand"}
         icon={direction === "olingan" ? HandCoins : Handshake}
         tone={direction === "olingan" ? "debt" : "receivable"}
         hint={`${items.length} ta ochiq`}
@@ -160,7 +164,7 @@ function Summary({ direction, items }: { direction: DebtDirection; items: DebtIt
       {direction === "olingan" ? (
         <StatCard
           label="Kreditlar: har oy"
-          value={formatMoney(monthlyCredits)}
+          value={<Money amount={monthlyCredits} />}
           icon={Landmark}
           tone="primary"
           hint={`${items.filter((d) => d.kind === "kredit").length} ta kredit`}
@@ -175,7 +179,7 @@ function Summary({ direction, items }: { direction: DebtDirection; items: DebtIt
       )}
       <StatCard
         label="Eng yaqin muddat"
-        value={nearest ? formatMoney(nearestAmount) : "—"}
+        value={nearest ? <Money amount={nearestAmount} /> : "—"}
         icon={CalendarClock}
         tone="income"
         hint={nearest?.nextDue ? `${formatDate(new Date(nearest.nextDue))} · ${nearest.counterparty}` : "Muddat yo'q"}
@@ -188,5 +192,31 @@ function Summary({ direction, items }: { direction: DebtDirection; items: DebtIt
         hint={overdue.length ? formatMoney(overdue.reduce((sum, d) => sum + d.remaining, 0)) : "Hammasi joyida"}
       />
     </div>
+  );
+}
+
+/** Telefonda Qarzlar va Xaq bitta pastki tugma ostida — ular orasida shu yerdan almashiladi */
+function DebtSwitch({ direction }: { direction: DebtDirection }) {
+  const tabs = [
+    { href: "/qarzlar", label: "Men qarzdorman", active: direction === "olingan" },
+    { href: "/xaq", label: "Menga qarzdor", active: direction === "berilgan" },
+  ];
+  return (
+    <nav aria-label="Qarz turi" className="-mt-2 grid grid-cols-2 gap-1 rounded-full bg-muted p-1 lg:hidden">
+      {tabs.map((tab) => (
+        <Link
+          key={tab.href}
+          href={tab.href}
+          aria-current={tab.active ? "page" : undefined}
+          className={
+            tab.active
+              ? "rounded-full bg-card py-2 text-center text-sm font-medium shadow-sm"
+              : "rounded-full py-2 text-center text-sm font-medium text-muted-foreground"
+          }
+        >
+          {tab.label}
+        </Link>
+      ))}
+    </nav>
   );
 }

@@ -3,13 +3,12 @@ import type { Metadata } from "next";
 import { AiInsightCard } from "@/components/dashboard/ai-insight";
 import { CategoryBreakdown } from "@/components/dashboard/category-breakdown";
 import { DailyChart } from "@/components/dashboard/daily-chart";
-import { DebtsSummary } from "@/components/dashboard/debts-summary";
-import { KpiRow } from "@/components/dashboard/kpi-row";
+import { BudgetTile, DebtTile, MonthHero } from "@/components/dashboard/summary-tiles";
 import { TopExpenses } from "@/components/dashboard/top-expenses";
 import { TrendChart } from "@/components/dashboard/trend-chart";
 import { RecentEntries } from "@/components/entries/recent-entries";
 import { PageHeader } from "@/components/page-header";
-import { ListCardSkeleton, StatCardsSkeleton } from "@/components/skeletons";
+import { ListCardSkeleton } from "@/components/skeletons";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getMonthInsight } from "@/lib/data/ai";
@@ -19,18 +18,27 @@ import { formatMoney } from "@/lib/money";
 
 export const metadata: Metadata = { title: "Dashboard" };
 
+/*
+  Bento to'r: kompyuterda 4 ustun, planshetda 2, telefonda 1.
+  1-qator: oy natijasi (2) · budjet · qarzlar   2-qator: kategoriyalar (2) · AI tahlil (2)
+  3-qator: 12 oy (2) · kunlik (2)               4-qator: eng katta xarajatlar (2) · so'nggi yozuvlar (2)
+*/
 export default function DashboardPage({ searchParams }: PageProps<"/">) {
   return (
     <>
       <PageHeader title="Dashboard" description="Oylik moliyaviy holatingiz bir qarashda" />
 
-      <Suspense fallback={<DashboardSkeleton />}>
-        <DashboardContent searchParams={searchParams} />
-      </Suspense>
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <Suspense fallback={<DashboardSkeleton />}>
+          <DashboardContent searchParams={searchParams} />
+        </Suspense>
 
-      <Suspense fallback={<ListCardSkeleton rows={5} />}>
-        <RecentEntriesSection />
-      </Suspense>
+        <div className="md:col-span-2 *:h-full">
+          <Suspense fallback={<ListCardSkeleton rows={5} />}>
+            <RecentEntriesSection />
+          </Suspense>
+        </div>
+      </div>
     </>
   );
 }
@@ -41,42 +49,37 @@ async function DashboardContent({ searchParams }: Pick<PageProps<"/">, "searchPa
 
   return (
     <>
-      <KpiRow data={data} />
+      <MonthHero data={data} className="md:col-span-2" />
+      <BudgetTile data={data} />
+      <DebtTile data={data} />
 
-      <div className="grid gap-6 xl:grid-cols-3">
-        <CategoryBreakdown data={data} className="xl:col-span-2" />
-        <Suspense fallback={<Skeleton className="h-80 rounded-xl" />}>
-          <AiInsightSection month={data.month} monthLabel={data.monthLabel} />
-        </Suspense>
-      </div>
+      <CategoryBreakdown data={data} className="md:col-span-2" />
+      <Suspense fallback={<Skeleton className="h-96 rounded-2xl md:col-span-2" />}>
+        <AiInsightSection month={data.month} monthLabel={data.monthLabel} />
+      </Suspense>
 
-      <div className="grid gap-6 xl:grid-cols-3">
-        <Card className="xl:col-span-2">
-          <CardHeader>
-            <CardTitle>Kirim va chiqim — 12 oy</CardTitle>
-            <CardDescription>Har oy qancha kirdi va qancha ketdi</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <TrendChart trend={data.trend} />
-          </CardContent>
-        </Card>
-        <DebtsSummary data={data} />
-      </div>
+      <Card className="md:col-span-2">
+        <CardHeader>
+          <CardTitle>Kirim va chiqim — 12 oy</CardTitle>
+          <CardDescription>Har oy qancha kirdi va qancha ketdi</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <TrendChart trend={data.trend} />
+        </CardContent>
+      </Card>
+      <Card className="md:col-span-2">
+        <CardHeader>
+          <CardTitle>Kunlik xarajatlar</CardTitle>
+          <CardDescription>
+            {data.monthLabel} · kuniga o&apos;rtacha {formatMoney(data.dailyAverage)}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <DailyChart daily={data.daily} average={data.dailyAverage} />
+        </CardContent>
+      </Card>
 
-      <div className="grid gap-6 xl:grid-cols-3">
-        <Card className="xl:col-span-2">
-          <CardHeader>
-            <CardTitle>Kunlik xarajatlar</CardTitle>
-            <CardDescription>
-              {data.monthLabel} · kuniga o&apos;rtacha {formatMoney(data.dailyAverage)}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <DailyChart daily={data.daily} average={data.dailyAverage} />
-          </CardContent>
-        </Card>
-        <TopExpenses data={data} />
-      </div>
+      <TopExpenses data={data} className="md:col-span-2" />
     </>
   );
 }
@@ -92,6 +95,7 @@ async function AiInsightSection({ month, monthLabel }: { month: string; monthLab
       configured={configured}
       initial={insight}
       changedSince={changedSince}
+      className="md:col-span-2"
     />
   );
 }
@@ -104,12 +108,11 @@ async function RecentEntriesSection() {
 function DashboardSkeleton() {
   return (
     <>
-      <StatCardsSkeleton />
-      {[0, 1, 2].map((row) => (
-        <div key={row} className="grid gap-6 xl:grid-cols-3">
-          <Skeleton className="h-80 rounded-xl xl:col-span-2" />
-          <Skeleton className="h-80 rounded-xl" />
-        </div>
+      <Skeleton className="h-72 rounded-2xl md:col-span-2" />
+      <Skeleton className="h-72 rounded-2xl" />
+      <Skeleton className="h-72 rounded-2xl" />
+      {[0, 1, 2, 3, 4].map((i) => (
+        <Skeleton key={i} className="h-96 rounded-2xl md:col-span-2" />
       ))}
     </>
   );

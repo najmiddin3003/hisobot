@@ -14,7 +14,7 @@ export function ColorIcon({
 }) {
   return (
     <span
-      className={cn("flex size-9 shrink-0 items-center justify-center rounded-lg", className)}
+      className={cn("flex size-9 shrink-0 items-center justify-center rounded-xl", className)}
       // #rrggbb + "1f" ≈ 12% shaffoflikdagi fon
       style={{ backgroundColor: `${color}1f`, color }}
     >
