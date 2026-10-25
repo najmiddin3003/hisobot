@@ -1,4 +1,4 @@
-import { Receipt } from "lucide-react";
+import { IllustrationChart } from "@/components/illustrations";
 import { EntryRow } from "@/components/entries/entry-row";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import type { Dashboard } from "@/lib/data/dashboard";
@@ -21,7 +21,7 @@ export function TopExpenses({ data, className }: { data: Dashboard; className?: 
         </div>
       ) : (
         <div className="flex flex-col items-center gap-2 p-8 text-center text-sm text-muted-foreground">
-          <Receipt className="size-6" />
+          <IllustrationChart className="h-20" />
           Bu oyda hali chiqim yo&apos;q
         </div>
       )}

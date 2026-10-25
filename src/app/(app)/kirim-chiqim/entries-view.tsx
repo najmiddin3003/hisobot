@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowLeftRight, FileSearch, Minus, Plus, ReceiptText } from "lucide-react";
+import { ArrowLeftRight, Minus, Plus } from "lucide-react";
 import { EntryEditorProvider, useEntryEditor } from "@/components/entries/entry-editor";
 import { AnimatePresence } from "motion/react";
 import { EntryRow } from "@/components/entries/entry-row";
+import { EmptyState as RichEmptyState, IllustrationReceipt, IllustrationSearch } from "@/components/illustrations";
 import { Money } from "@/components/money";
 import { Collapse } from "@/components/motion/collapse";
 import { Button } from "@/components/ui/button";
@@ -120,23 +121,18 @@ function MonthTotals({ totals }: { totals: Totals }) {
 }
 
 function EmptyState({ filtered, onAdd }: { filtered: boolean; onAdd: () => void }) {
-  const Icon = filtered ? FileSearch : ReceiptText;
   return (
-    <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed p-10 text-center">
-      <div className="flex size-11 items-center justify-center rounded-full bg-primary/10 text-primary">
-        <Icon className="size-5" />
-      </div>
-      <div className="space-y-1">
-        <p className="font-medium">{filtered ? "Hech narsa topilmadi" : "Bu oyda hali yozuv yo'q"}</p>
-        <p className="text-sm text-muted-foreground">
-          {filtered ? "Filtrlarni o'zgartirib ko'ring" : "Birinchi kirim yoki chiqimni qo'shing"}
-        </p>
-      </div>
-      {!filtered && (
-        <Button onClick={onAdd}>
-          <Plus /> Yozuv qo&apos;shish
-        </Button>
-      )}
-    </div>
+    <RichEmptyState
+      illustration={filtered ? <IllustrationSearch /> : <IllustrationReceipt />}
+      title={filtered ? "Hech narsa topilmadi" : "Bu oyda hali yozuv yo'q"}
+      text={filtered ? "Filtrlarni o'zgartirib ko'ring" : "Birinchi kirim yoki chiqimni qo'shing"}
+      action={
+        !filtered && (
+          <Button onClick={onAdd}>
+            <Plus /> Yozuv qo&apos;shish
+          </Button>
+        )
+      }
+    />
   );
 }

@@ -2,6 +2,7 @@
 
 import { createElement } from "react";
 import { CalendarClock, CircleCheck, HandCoins, Handshake, Landmark, TriangleAlert } from "lucide-react";
+import { ProgressRing } from "@/components/charts";
 import { DEBT_TEXT } from "@/components/debts/debt-text";
 import { Money } from "@/components/money";
 import { Button } from "@/components/ui/button";
@@ -84,12 +85,25 @@ export function DebtCard({ debt, onOpen, onPay }: { debt: DebtItem; onOpen: () =
           ) : null}
         </div>
 
-        <div>
-          <p className="text-xs text-muted-foreground">{debt.closed ? "Jami" : text.remainingLabel}</p>
-          <Money amount={debt.closed ? debt.total : debt.remaining} className="block truncate text-[1.75rem]" />
+        {/* Halqa — qancha qismi qaytarilgan; yonida qolgan summa */}
+        <div className="flex items-center gap-4">
+          <ProgressRing
+            value={debt.progress}
+            size={68}
+            stroke={7}
+            label={`${Math.round(debt.progress * 100)}% qaytarilgan`}
+            className={debt.direction === "olingan" ? "text-debt" : "text-receivable"}
+          >
+            <span className="text-sm font-semibold text-foreground tabular-nums">{Math.round(debt.progress * 100)}%</span>
+          </ProgressRing>
+          <div className="min-w-0 space-y-0.5">
+            <p className="text-xs text-muted-foreground">{debt.closed ? "Jami" : text.remainingLabel}</p>
+            <Money amount={debt.closed ? debt.total : debt.remaining} className="block truncate text-[1.75rem]" />
+            <p className="truncate text-xs text-muted-foreground">
+              {text.paidLabel}: {formatMoney(debt.paid)} · jami {formatMoney(debt.total)}
+            </p>
+          </div>
         </div>
-
-        <DebtProgress debt={debt} />
 
         <div className="flex items-center justify-between gap-3">
           <p className={cn("flex min-w-0 items-center gap-1.5 text-xs", debt.overdue ? "text-expense" : "text-muted-foreground")}>

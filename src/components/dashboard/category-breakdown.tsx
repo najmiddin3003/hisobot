@@ -1,22 +1,38 @@
 import Link from "next/link";
-import { ArrowDownRight, ArrowUpRight, PieChart } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight } from "lucide-react";
+import { IllustrationChart } from "@/components/illustrations";
+import { Donut, type DonutSegment } from "@/components/charts";
 import { ColorIcon } from "@/components/color-icon";
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import type { Dashboard } from "@/lib/data/dashboard";
-import { formatMoney } from "@/lib/money";
+import { formatCompact, formatMoney } from "@/lib/money";
 import { cn } from "@/lib/utils";
 
 const VISIBLE = 8;
 
+const DONUT_SLICES = 5;
+
 /**
- * Chiqim kategoriyalar bo'yicha: tartiblangan bloklar, ulush chizig'i va o'tgan oyga nisbatan o'zgarish.
- * Kategoriyalar ko'p bo'lgani uchun doira diagramma o'rniga — chiziqlar uzunligini solishtirish osonroq.
+ * Chiqim kategoriyalar bo'yicha: chapda doira diagramma (eng katta 5 ta + boshqalar), o'ngda tartiblangan
+ * ro'yxat — ulush chizig'i va o'tgan oyga nisbatan o'zgarish. Rang — kategoriyaning o'z rangi (diagramma bilan bog'lanadi).
  */
 export function CategoryBreakdown({ data, className }: { data: Dashboard; className?: string }) {
   const rows = data.categories.slice(0, VISIBLE);
   const rest = data.categories.slice(VISIBLE);
   const restTotal = rest.reduce((sum, r) => sum + r.amount, 0);
   const max = rows[0]?.amount ?? 0;
+  const others = data.categories.slice(DONUT_SLICES).reduce((sum, r) => sum + r.amount, 0);
+  const segments: DonutSegment[] = [
+    ...data.categories.slice(0, DONUT_SLICES).map((r) => ({
+      key: r.id,
+      value: r.amount,
+      color: r.color,
+      label: `${r.name}: ${formatMoney(r.amount)}`,
+    })),
+    ...(others > 0
+      ? [{ key: "others", value: others, color: "var(--muted-foreground)", label: `Boshqalar: ${formatMoney(others)}` }]
+      : []),
+  ];
 
   return (
     <Card className={className}>
@@ -34,44 +50,49 @@ export function CategoryBreakdown({ data, className }: { data: Dashboard; classN
       <CardContent>
         {rows.length === 0 ? (
           <div className="flex flex-col items-center gap-2 py-8 text-center text-sm text-muted-foreground">
-            <PieChart className="size-6" />
+            <IllustrationChart className="h-20" />
             Bu oyda hali chiqim yo&apos;q
           </div>
         ) : (
-          <div className="space-y-3.5">
-            {rows.map((row) => (
-              <Link
-                key={row.id}
-                href={`/kirim-chiqim?kategoriya=${row.id}${data.isCurrentMonth ? "" : `&oy=${data.month}`}`}
-                className="group flex items-center gap-3"
-              >
-                <ColorIcon icon={row.icon} color={row.color} className="size-9" />
-                <div className="min-w-0 flex-1 space-y-1.5">
-                  <div className="flex items-baseline justify-between gap-2 text-sm">
-                    <span className="truncate font-medium group-hover:underline">{row.name}</span>
-                    <span className="shrink-0 font-semibold">{formatMoney(row.amount)}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {/* Bitta rang (chiqim) — uzunlik miqdorni bildiradi; kategoriya ikonkasi o'z rangida */}
-                    <div className="h-2 flex-1 overflow-hidden rounded-full bg-muted">
-                      <div
-                        className="bar-grow h-full rounded-full bg-chart-expense"
-                        style={{ width: `${max > 0 ? (row.amount / max) * 100 : 0}%` }}
-                      />
+          <div className="grid items-center gap-6 sm:grid-cols-[auto_minmax(0,1fr)]">
+            <Donut segments={segments} label={`Xarajatlar ulushi: ${data.monthLabel}`}>
+              <span className="text-xs text-muted-foreground">Chiqim</span>
+              <span className="font-heading text-lg font-medium">{formatCompact(data.expense.value)}</span>
+            </Donut>
+            <div className="space-y-3.5">
+              {rows.map((row) => (
+                <Link
+                  key={row.id}
+                  href={`/kirim-chiqim?kategoriya=${row.id}${data.isCurrentMonth ? "" : `&oy=${data.month}`}`}
+                  className="group flex items-center gap-3"
+                >
+                  <ColorIcon icon={row.icon} color={row.color} className="size-9" />
+                  <div className="min-w-0 flex-1 space-y-1.5">
+                    <div className="flex items-baseline justify-between gap-2 text-sm">
+                      <span className="truncate font-medium group-hover:underline">{row.name}</span>
+                      <span className="shrink-0 font-semibold">{formatMoney(row.amount)}</span>
                     </div>
-                    <span className="w-9 shrink-0 text-right text-xs text-muted-foreground tabular-nums">
-                      {Math.round(row.share * 100)}%
-                    </span>
-                    <ChangeTag change={row.change} />
+                    <div className="flex items-center gap-2">
+                      <div className="h-2 flex-1 overflow-hidden rounded-full bg-muted">
+                        <div
+                          className="bar-grow h-full rounded-full"
+                          style={{ width: `${max > 0 ? (row.amount / max) * 100 : 0}%`, backgroundColor: row.color }}
+                        />
+                      </div>
+                      <span className="w-9 shrink-0 text-right text-xs text-muted-foreground tabular-nums">
+                        {Math.round(row.share * 100)}%
+                      </span>
+                      <ChangeTag change={row.change} />
+                    </div>
                   </div>
-                </div>
-              </Link>
-            ))}
-            {rest.length > 0 && (
-              <p className="pl-12 text-xs text-muted-foreground">
-                Yana {rest.length} ta kategoriya: {formatMoney(restTotal)}
-              </p>
-            )}
+                </Link>
+              ))}
+              {rest.length > 0 && (
+                <p className="pl-12 text-xs text-muted-foreground">
+                  Yana {rest.length} ta kategoriya: {formatMoney(restTotal)}
+                </p>
+              )}
+            </div>
           </div>
         )}
       </CardContent>

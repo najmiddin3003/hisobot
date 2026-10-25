@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { AiInsightCard } from "@/components/dashboard/ai-insight";
 import { CategoryBreakdown } from "@/components/dashboard/category-breakdown";
 import { DailyChart } from "@/components/dashboard/daily-chart";
+import { GoalsTile } from "@/components/dashboard/goals-tile";
 import { BudgetTile, DebtTile, MonthHero } from "@/components/dashboard/summary-tiles";
 import { TopExpenses } from "@/components/dashboard/top-expenses";
 import { TrendChart } from "@/components/dashboard/trend-chart";
@@ -21,7 +22,8 @@ export const metadata: Metadata = { title: "Dashboard" };
 /*
   Bento to'r: kompyuterda 4 ustun, planshetda 2, telefonda 1.
   1-qator: oy natijasi (2) · budjet · qarzlar   2-qator: kategoriyalar (2) · AI tahlil (2)
-  3-qator: 12 oy (2) · kunlik (2)               4-qator: eng katta xarajatlar (2) · so'nggi yozuvlar (2)
+  3-qator: 12 oy (2) · kunlik (2)               4-qator: maqsadlar (2) · eng katta xarajatlar (2)
+  5-qator: so'nggi yozuvlar (4)
 */
 export default function DashboardPage({ searchParams }: PageProps<"/">) {
   return (
@@ -33,7 +35,7 @@ export default function DashboardPage({ searchParams }: PageProps<"/">) {
           <DashboardContent searchParams={searchParams} />
         </Suspense>
 
-        <div className="md:col-span-2 *:h-full">
+        <div className="md:col-span-2 xl:col-span-4 *:h-full">
           <Suspense fallback={<ListCardSkeleton rows={5} />}>
             <RecentEntriesSection />
           </Suspense>
@@ -79,6 +81,9 @@ async function DashboardContent({ searchParams }: Pick<PageProps<"/">, "searchPa
         </CardContent>
       </Card>
 
+      <Suspense fallback={<Skeleton className="h-72 rounded-2xl md:col-span-2" />}>
+        <GoalsTile className="md:col-span-2" />
+      </Suspense>
       <TopExpenses data={data} className="md:col-span-2" />
     </>
   );

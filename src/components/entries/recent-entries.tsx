@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, Minus, Plus, ReceiptText } from "lucide-react";
+import { ArrowRight, Minus, Plus } from "lucide-react";
 import { AnimatePresence } from "motion/react";
 import { EntryEditorProvider, useEntryEditor } from "@/components/entries/entry-editor";
 import { EntryRow } from "@/components/entries/entry-row";
+import { IllustrationReceipt } from "@/components/illustrations";
 import { Collapse } from "@/components/motion/collapse";
 import { Button } from "@/components/ui/button";
 import { Card, CardAction, CardHeader, CardTitle } from "@/components/ui/card";
@@ -46,7 +47,7 @@ function RecentEntriesCard({ entries }: { entries: Entry[] }) {
         </div>
       ) : (
         <div className="flex flex-col items-center gap-2 p-8 text-center text-sm text-muted-foreground">
-          <ReceiptText className="size-6" />
+          <IllustrationReceipt className="h-20" />
           Hali yozuv yo&apos;q — birinchisini qo&apos;shing
         </div>
       )}

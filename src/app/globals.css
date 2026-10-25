@@ -264,6 +264,63 @@
   transition: width 0.7s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+/* SVG chiziqlar (pathLength=1) chizilib paydo bo'ladi: trend chizig'i, progress halqasi */
+@keyframes draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+}
+
+@utility animate-draw {
+  stroke-dasharray: 1 1;
+  animation: draw 1s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+}
+
+@keyframes ring-in {
+  from {
+    stroke-dashoffset: var(--ring-value, 1);
+  }
+}
+
+@utility animate-ring {
+  animation: ring-in 1s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+}
+
+/* Maqsad idishi: suyuqlik pastdan ko'tariladi, to'lqin sekin chayqaladi */
+@keyframes jar-fill {
+  from {
+    transform: scaleY(0);
+  }
+}
+
+@keyframes jar-wave {
+  to {
+    transform: translateX(32px);
+  }
+}
+
+@utility jar-fill {
+  animation: jar-fill 1.2s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+}
+
+@utility jar-wave {
+  animation: jar-wave 3s linear infinite;
+}
+
+/* Doira diagramma segmentlari ketma-ket yoyiladi */
+@keyframes donut-in {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+}
+
+@utility donut-segment {
+  transform-origin: center;
+  animation: donut-in 0.6s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+  transition: opacity 0.2s;
+}
+
 /* Qurilmada "harakatni kamaytirish" yoqilgan bo'lsa — hammasi darhol */
 @media (prefers-reduced-motion: reduce) {
   *,

@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { CalendarClock, CircleAlert, Loader2, Minus, Pencil, Plus, Repeat, Trash2 } from "lucide-react";
+import { CircleAlert, Loader2, Minus, Pencil, Plus, Repeat, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { ColorIcon } from "@/components/color-icon";
+import { EmptyState, IllustrationCalendar } from "@/components/illustrations";
 import { AmountInput } from "@/components/entries/amount-input";
 import { Money } from "@/components/money";
 import { ActivePill } from "@/components/motion/active-pill";
@@ -85,18 +86,11 @@ export function RecurringView({ items, options }: { items: RecurringItem[]; opti
           ))}
         </div>
       ) : (
-        <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed p-10 text-center">
-          <div className="flex size-11 items-center justify-center rounded-full bg-primary/10 text-primary">
-            <CalendarClock className="size-5" />
-          </div>
-          <div className="space-y-1">
-            <p className="font-medium">Takroriy to&apos;lovlar yo&apos;q</p>
-            <p className="max-w-sm text-sm text-muted-foreground">
-              Ijara, internet, telefon, obunalar — har oy takrorlanadigan to&apos;lovlarni qo&apos;shing, ular o&apos;zi
-              yoziladi.
-            </p>
-          </div>
-        </div>
+        <EmptyState
+          illustration={<IllustrationCalendar />}
+          title="Takroriy to'lovlar yo'q"
+          text="Ijara, internet, telefon, obunalar — har oy takrorlanadigan to'lovlarni qo'shing, ular o'zi yoziladi."
+        />
       )}
 
       <Dialog open={editing !== null} onOpenChange={(value) => !value && setEditing(null)}>

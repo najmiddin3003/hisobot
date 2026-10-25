@@ -1,79 +1,90 @@
 import Link from "next/link";
 import { ArrowDownRight, ArrowRight, ArrowUpRight, CalendarCheck, HandCoins, Handshake, Landmark, Wallet } from "lucide-react";
+import { ProgressRing, Sparkline } from "@/components/charts";
 import { Money } from "@/components/money";
 import { ChangePill } from "@/components/stat-card";
 import { Card, CardContent } from "@/components/ui/card";
 import type { Dashboard } from "@/lib/data/dashboard";
 import { formatDate } from "@/lib/dates";
 import { daysText } from "@/lib/debts";
-import { formatMoney } from "@/lib/money";
+import { formatCompact, formatMoney } from "@/lib/money";
 import { cn } from "@/lib/utils";
 
-/** Bosh blok: oy natijasi (kirim − chiqim) katta raqamda, ostida kirim va chiqim */
+/** Bosh blok — oy hikoyasi: natija katta raqamda, bir gaplik xulosa, tejash halqasi, kirim/chiqim trendlari */
 export function MonthHero({ data, className }: { data: Dashboard; className?: string }) {
   const { income, expense, net } = data;
-  const savedShare = income.value > 0 && net.value > 0 ? Math.round((net.value / income.value) * 100) : null;
-  const summary =
-    income.value === 0 && expense.value === 0
-      ? "Bu oyda hali yozuv yo'q — birinchisini qo'shing"
-      : net.value < 0
-        ? `Chiqim kirimdan ${formatMoney(-net.value)} ko'p bo'ldi`
-        : savedShare !== null
-          ? `Kirimning ${savedShare}% i qoldi`
-          : "Kirim va chiqim teng";
+  const empty = income.value === 0 && expense.value === 0;
+  const keptShare = income.value > 0 ? net.value / income.value : 0;
+  const diff = net.value - net.previous;
+
+  // Hikoya: asosiy gap va o'tgan oy bilan taqqoslash
+  const headline = empty
+    ? "Bu oyda hali yozuv yo'q"
+    : net.value < 0
+      ? `Chiqim kirimdan ${formatCompact(-net.value)} so'm ko'p bo'ldi`
+      : income.value > 0
+        ? `Bu oy kirimning ${Math.round(keptShare * 100)}% i qoldi`
+        : "Kirim hali yo'q";
+  const comparison = empty
+    ? "Birinchi kirim yoki chiqimni qo'shing — hisob shu yerdan boshlanadi."
+    : diff === 0
+      ? `${data.prevLabel} bilan bir xil natija.`
+      : `${data.prevLabel}ga nisbatan ${formatCompact(Math.abs(diff))} so'm ${diff > 0 ? "yaxshiroq" : "kamroq"}${diff > 0 && net.value > 0 ? " — zo'r!" : "."}`;
 
   return (
     <Card className={cn("justify-between gap-6", className)}>
-      <CardContent className="space-y-3">
-        <p className="text-sm text-muted-foreground">
-          {data.monthLabel} natijasi{data.isCurrentMonth && " · hozircha"}
-        </p>
-        <Money
-          amount={net.value}
-          sign
-          className={cn("block text-[2.75rem] sm:text-6xl", net.value < 0 ? "text-expense" : "text-income")}
-        />
-        <p className="text-sm text-muted-foreground">
-          {summary}
-          <span className="hidden sm:inline">
-            {" "}
-            · {data.prevLabel}: {formatMoney(net.previous, { sign: true })}
-          </span>
-        </p>
-        {income.value > 0 && <SpendBar income={income.value} expense={expense.value} />}
+      <CardContent className="flex items-start justify-between gap-4">
+        <div className="min-w-0 space-y-3">
+          <p className="text-sm text-muted-foreground">
+            {data.monthLabel} natijasi{data.isCurrentMonth && " · hozircha"}
+          </p>
+          <Money
+            amount={net.value}
+            sign
+            className={cn("block text-[2.75rem] sm:text-6xl", net.value < 0 ? "text-expense" : "text-income")}
+          />
+          <div className="space-y-1">
+            <p className="font-heading text-lg leading-snug font-medium">{headline}</p>
+            <p className="text-sm text-muted-foreground">{comparison}</p>
+          </div>
+        </div>
+        {!empty && income.value > 0 && (
+          <ProgressRing
+            value={net.value < 0 ? 1 : keptShare}
+            size={96}
+            stroke={9}
+            label={net.value < 0 ? "Chiqim kirimdan oshdi" : `Kirimning ${Math.round(keptShare * 100)}% i qoldi`}
+            className={cn("hidden sm:inline-flex", net.value < 0 ? "text-chart-expense" : "text-chart-income")}
+            trackClassName="text-chart-expense/25"
+          >
+            <span className="font-heading text-xl font-medium text-foreground">
+              {net.value < 0 ? "−" : `${Math.round(keptShare * 100)}%`}
+            </span>
+            <span className="block text-[11px] text-muted-foreground">{net.value < 0 ? "oshib ketdi" : "qoldi"}</span>
+          </ProgressRing>
+        )}
       </CardContent>
 
       <CardContent className="grid grid-cols-2 gap-4 border-t pt-5">
-        <FlowStat label="Kirim" value={income.value} change={income.change} debt={income.debt} />
-        <FlowStat label="Chiqim" value={expense.value} change={expense.change} debt={expense.debt} upIsGood={false} />
+        <FlowStat
+          label="Kirim"
+          value={income.value}
+          change={income.change}
+          debt={income.debt}
+          trend={data.trend.map((t) => t.income)}
+          trendClassName="text-chart-income"
+        />
+        <FlowStat
+          label="Chiqim"
+          value={expense.value}
+          change={expense.change}
+          debt={expense.debt}
+          upIsGood={false}
+          trend={data.trend.map((t) => t.expense)}
+          trendClassName="text-chart-expense"
+        />
       </CardContent>
     </Card>
-  );
-}
-
-/** Kirimning qancha qismi sarflangani: chiqim (terrakota) va qolgani (yashil), orasida 2px bo'shliq */
-function SpendBar({ income, expense }: { income: number; expense: number }) {
-  const spent = Math.min(expense / income, 1);
-  const spentPct = Math.round(spent * 100);
-  return (
-    <div className="space-y-1.5 pt-3">
-      <div
-        className="flex h-2.5 gap-0.5 overflow-hidden rounded-full"
-        role="img"
-        aria-label={`Kirimning ${spentPct}% i sarflandi`}
-      >
-        {spent > 0 && <div className="bar-grow h-full rounded-l-full bg-chart-expense" style={{ width: `${spent * 100}%` }} />}
-        {spent < 1 && <div className="bar-grow h-full flex-1 rounded-r-full bg-chart-income [animation-delay:120ms]" />}
-      </div>
-      <div className="flex justify-between text-xs text-muted-foreground">
-        <span className="flex items-center gap-1.5">
-          <span className="size-2 rounded-full bg-chart-expense" /> Sarflandi {spentPct}%
-        </span>
-        <span className="flex items-center gap-1.5">
-          Qoldi {100 - spentPct}% <span className="size-2 rounded-full bg-chart-income" />
-        </span>
-      </div>
-    </div>
   );
 }
 
@@ -83,12 +94,17 @@ function FlowStat({
   change,
   debt,
   upIsGood = true,
+  trend,
+  trendClassName,
 }: {
   label: string;
   value: number;
   change: number | null;
   debt: number;
   upIsGood?: boolean;
+  /** Oxirgi 12 oy — kichik trend chizig'i uchun */
+  trend: number[];
+  trendClassName: string;
 }) {
   return (
     <div className="min-w-0 space-y-1.5">
@@ -97,6 +113,7 @@ function FlowStat({
         {change !== null && <ChangePill change={change} upIsGood={upIsGood} />}
       </p>
       <Money amount={value} className="block truncate text-xl sm:text-2xl" />
+      <Sparkline values={trend} className={trendClassName} label={`${label}: oxirgi 12 oy`} />
       {debt > 0 && <p className="truncate text-xs text-muted-foreground">shundan qarz/kredit: {formatMoney(debt)}</p>}
     </div>
   );
@@ -171,7 +188,10 @@ export function DebtTile({ data, className }: { data: Dashboard; className?: str
                   href={item.direction === "olingan" ? "/qarzlar" : "/xaq"}
                   className="flex items-center gap-2.5 rounded-xl bg-foreground/[0.06] px-2.5 py-2 transition-colors hover:bg-foreground/10"
                 >
-                  <Icon className="size-4 shrink-0" />
+                  {/* Halqa ichida ikonka: qancha qismi qaytarilgan */}
+                  <ProgressRing value={item.progress} size={34} stroke={3.5} label={`${Math.round(item.progress * 100)}% qaytarilgan`}>
+                    <Icon className="size-3.5" />
+                  </ProgressRing>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-baseline justify-between gap-2">
                       <span className="truncate text-sm font-medium">{item.counterparty}</span>

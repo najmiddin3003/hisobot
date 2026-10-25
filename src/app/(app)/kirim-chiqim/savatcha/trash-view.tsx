@@ -4,6 +4,7 @@ import { useTransition } from "react";
 import { Loader2, RotateCcw, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { EntryRow } from "@/components/entries/entry-row";
+import { EmptyState, IllustrationTrash } from "@/components/illustrations";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -24,15 +25,11 @@ import { purgeEntry, restoreEntry } from "../actions";
 export function TrashView({ entries }: { entries: Entry[] }) {
   if (entries.length === 0) {
     return (
-      <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed p-10 text-center">
-        <div className="flex size-11 items-center justify-center rounded-full bg-muted text-muted-foreground">
-          <Trash2 className="size-5" />
-        </div>
-        <div className="space-y-1">
-          <p className="font-medium">Savatcha bo&apos;sh</p>
-          <p className="text-sm text-muted-foreground">O&apos;chirilgan yozuvlar shu yerga tushadi va qayta tiklanadi</p>
-        </div>
-      </div>
+      <EmptyState
+        illustration={<IllustrationTrash />}
+        title="Savatcha bo'sh"
+        text="O'chirilgan yozuvlar shu yerga tushadi va qayta tiklanadi"
+      />
     );
   }
 

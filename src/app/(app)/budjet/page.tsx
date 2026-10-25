@@ -1,8 +1,10 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
+import { GoalsSection } from "@/components/goals/goals-section";
 import { PageHeader } from "@/components/page-header";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getBudgetOverview } from "@/lib/data/budget";
+import { getGoals } from "@/lib/data/goals";
 import { BudgetView } from "./budget-view";
 
 export const metadata: Metadata = { title: "Budjet" };
@@ -14,12 +16,19 @@ export default function BudgetPage() {
       <Suspense fallback={<BudgetSkeleton />}>
         <BudgetContent />
       </Suspense>
+      <Suspense fallback={<Skeleton className="h-48 rounded-2xl" />}>
+        <GoalsContent />
+      </Suspense>
     </>
   );
 }
 
 async function BudgetContent() {
   return <BudgetView data={await getBudgetOverview()} />;
+}
+
+async function GoalsContent() {
+  return <GoalsSection goals={await getGoals()} />;
 }
 
 function BudgetSkeleton() {

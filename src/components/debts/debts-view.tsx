@@ -6,6 +6,7 @@ import { CalendarClock, ChevronDown, HandCoins, Handshake, Landmark, Plus, Trian
 import { DebtCard } from "@/components/debts/debt-card";
 import { DebtDetails } from "@/components/debts/debt-details";
 import { DebtForm } from "@/components/debts/debt-form";
+import { IllustrationHandshake } from "@/components/illustrations";
 import { Money } from "@/components/money";
 import { ActivePill } from "@/components/motion/active-pill";
 import { StatCard } from "@/components/stat-card";
@@ -83,7 +84,7 @@ export function DebtsView({ direction, data }: { direction: DebtDirection; data:
                 onClick={() => newDebt(section.kind)}
                 className="flex w-full flex-col items-center gap-2 rounded-2xl border border-dashed p-8 text-center text-sm text-muted-foreground transition-colors hover:bg-muted/40"
               >
-                <section.icon className="size-6" />
+                <IllustrationHandshake className="h-20" />
                 {section.kind === "kredit"
                   ? "Ochiq kredit yo'q"
                   : direction === "olingan"

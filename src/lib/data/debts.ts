@@ -127,6 +127,8 @@ export async function loadDebtOverview(now = new Date()) {
         nextDue: calc.nextDue.toISOString(),
         daysToDue: calc.daysToDue,
         overdue: calc.overdue,
+        /** Qancha qismi qaytarilgan, 0..1 */
+        progress: calc.progress,
       });
     }
   }
