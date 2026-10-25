@@ -195,6 +195,13 @@
   line-height: 1.1;
 }
 
+/* Mavzu almashganda: standart xira o'tish o'rniga doira bo'lib yoyilish (theme-toggle.tsx) */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

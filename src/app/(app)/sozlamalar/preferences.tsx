@@ -1,8 +1,7 @@
 "use client";
 
 import { useSyncExternalStore, useTransition } from "react";
-import { Check, Loader2, Monitor, Moon, Sun, Trash2, type LucideIcon } from "lucide-react";
-import { useTheme } from "next-themes";
+import { Check, Loader2, Moon, Sun, Trash2, type LucideIcon } from "lucide-react";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -15,26 +14,26 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { centerOf, useThemeSwitch, type ThemeName } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { clearAiHistory } from "./catalog-actions";
 
-const THEMES: { value: string; label: string; icon: LucideIcon; preview: string }[] = [
+const THEMES: { value: ThemeName; label: string; icon: LucideIcon; preview: string }[] = [
   { value: "light", label: "Yorug'", icon: Sun, preview: "bg-[#f4efe6]" },
   { value: "dark", label: "Qorong'i", icon: Moon, preview: "bg-[#15120e]" },
-  { value: "system", label: "Tizim bo'yicha", icon: Monitor, preview: "bg-linear-to-r from-[#f4efe6] from-50% to-[#15120e] to-50%" },
 ];
 
 const noop = () => () => {};
 
-/** Mavzu tanlash: yorug', qorong'i yoki qurilma sozlamasi bo'yicha */
+/** Mavzu tanlash: yorug' yoki qorong'i (birinchi kirishda — qurilma mavzusi) */
 export function ThemePicker() {
-  const { theme, setTheme } = useTheme();
+  const { theme, switchTheme } = useThemeSwitch();
   // Tanlangan mavzu faqat brauzerda ma'lum — serverda hech biri belgilanmaydi
   const mounted = useSyncExternalStore(noop, () => true, () => false);
 
   return (
-    <div role="radiogroup" aria-label="Mavzu" className="grid grid-cols-3 gap-3">
+    <div role="radiogroup" aria-label="Mavzu" className="grid grid-cols-2 gap-3">
       {THEMES.map((t) => {
         const selected = mounted && theme === t.value;
         return (
@@ -43,7 +42,7 @@ export function ThemePicker() {
             type="button"
             role="radio"
             aria-checked={selected}
-            onClick={() => setTheme(t.value)}
+            onClick={(e) => t.value !== theme && switchTheme(t.value, centerOf(e.currentTarget))}
             className={cn(
               "group space-y-2 rounded-xl border p-2 text-left transition-colors hover:bg-accent/50",
               selected && "border-primary ring-2 ring-primary/30",

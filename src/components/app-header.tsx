@@ -65,9 +65,7 @@ export function AppHeader({ quickAdd, userMenu }: { quickAdd: React.ReactNode; u
           <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => openAssistant()} aria-label="AI yordamchi">
             <Sparkles />
           </Button>
-          <div className="hidden sm:block">
-            <ThemeToggle />
-          </div>
+          <ThemeToggle />
           {userMenu}
         </div>
       </div>

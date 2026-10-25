@@ -1,24 +1,20 @@
 "use client";
 
 import Link from "next/link";
-import { LogOut, Monitor, Moon, Settings, Sun } from "lucide-react";
-import { useTheme } from "next-themes";
+import { LogOut, Settings } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 import { logoutAction } from "@/lib/auth/actions";
 
-/** Yuqori o'ng burchakdagi akkaunt menyusi: sozlamalar, mavzu va chiqish */
+/** Yuqori o'ng burchakdagi akkaunt menyusi: sozlamalar va chiqish (mavzu — yonidagi quyosh/oy tugmasida) */
 export function NavUser({ username }: { username: string }) {
-  const { theme, setTheme } = useTheme();
   const initial = username.slice(0, 1).toUpperCase();
 
   return (
@@ -40,19 +36,6 @@ export function NavUser({ username }: { username: string }) {
             <Settings /> Sozlamalar
           </Link>
         </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">Mavzu</DropdownMenuLabel>
-        <DropdownMenuRadioGroup value={theme} onValueChange={setTheme}>
-          <DropdownMenuRadioItem value="light">
-            <Sun /> Yorug&apos;
-          </DropdownMenuRadioItem>
-          <DropdownMenuRadioItem value="dark">
-            <Moon /> Qorong&apos;i
-          </DropdownMenuRadioItem>
-          <DropdownMenuRadioItem value="system">
-            <Monitor /> Tizim bo&apos;yicha
-          </DropdownMenuRadioItem>
-        </DropdownMenuRadioGroup>
         <DropdownMenuSeparator />
         <DropdownMenuItem variant="destructive" onSelect={() => logoutAction()}>
           <LogOut /> Chiqish

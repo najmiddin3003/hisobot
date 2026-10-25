@@ -100,7 +100,7 @@ async function SettingsContent() {
         <Card>
           <CardHeader>
             <CardTitle>Mavzu</CardTitle>
-            <CardDescription>Shu brauzerda saqlanadi</CardDescription>
+            <CardDescription>Shu brauzerda saqlanadi · yuqoridagi quyosh/oy tugmasi ham almashtiradi</CardDescription>
           </CardHeader>
           <CardContent>
             <ThemePicker />
