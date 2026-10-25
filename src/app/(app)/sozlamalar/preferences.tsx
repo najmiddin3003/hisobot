@@ -14,8 +14,11 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Oydin } from "@/components/robot/oydin";
+import { setRobotEnabled, useRobotEnabled } from "@/components/robot/use-robot";
 import { centerOf, useThemeSwitch, type ThemeName } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { clearAiHistory } from "./catalog-actions";
 
@@ -62,6 +65,30 @@ export function ThemePicker() {
         );
       })}
     </div>
+  );
+}
+
+/** Oydin robotchani yoqish/o'chirish (shu brauzerda saqlanadi) */
+export function RobotToggle() {
+  const enabled = useRobotEnabled();
+  const mounted = useSyncExternalStore(noop, () => true, () => false);
+
+  return (
+    <label className="flex cursor-pointer items-center gap-3 rounded-xl border p-3 transition-colors hover:bg-accent/50">
+      <Oydin className="h-12 w-auto shrink-0" eyes={mounted && !enabled ? "closed" : "happy"} thrust={mounted && !enabled ? 0 : 1} />
+      <span className="min-w-0 flex-1 space-y-0.5">
+        <span className="block text-sm font-medium">Oydin robotcha</span>
+        <span className="block text-xs text-muted-foreground">Sayt bo&apos;ylab uchib yuradi, bosilsa AI yordamchini ochadi</span>
+      </span>
+      <Switch
+        checked={mounted ? enabled : true}
+        onCheckedChange={(on) => {
+          setRobotEnabled(on);
+          toast.success(on ? "Oydin qaytdi! 👋" : "Oydin dam olishga ketdi");
+        }}
+        aria-label="Oydin robotcha"
+      />
+    </label>
   );
 }
 

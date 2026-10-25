@@ -16,6 +16,7 @@ import {
   X,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useRobotEnabled } from "@/components/robot/use-robot";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -40,6 +41,8 @@ export function AiAssistant() {
   const [configured, setConfigured] = useState<boolean | null>(null);
   const [chats, setChats] = useState<ChatSummary[]>([]);
   const [, startLoading] = useTransition();
+  // Oydin yoqilgan bo'lsa, kompyuterdagi tugma o'rniga uning o'zi bosiladi
+  const robot = useRobotEnabled();
 
   const refresh = () =>
     startLoading(async () => {
@@ -79,7 +82,7 @@ export function AiAssistant() {
           <Button
             size="icon"
             onClick={() => show(true)}
-            className="fixed right-6 bottom-6 z-40 hidden size-12 rounded-full shadow-lg shadow-black/20 lg:inline-flex"
+            className={cn("fixed right-6 bottom-6 z-40 hidden size-12 rounded-full shadow-lg shadow-black/20", !robot && "lg:inline-flex")}
             aria-label="AI yordamchi"
           >
             {chat.busy ? <Loader2 className="size-5 animate-spin" /> : <Sparkles className="size-5" />}

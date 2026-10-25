@@ -12,7 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { getSettingsOverview, type SettingsOverview } from "@/lib/data/settings";
 import { formatMoney } from "@/lib/money";
 import { CategoriesCard, WalletsCard } from "./catalog-view";
-import { ClearAiHistoryButton, ThemePicker } from "./preferences";
+import { ClearAiHistoryButton, RobotToggle, ThemePicker } from "./preferences";
 import { SecuritySection, SecuritySectionSkeleton } from "./security-section";
 
 export const metadata: Metadata = { title: "Sozlamalar" };
@@ -149,6 +149,7 @@ function AiCard({ ai }: { ai: SettingsOverview["integrations"]["ai"] }) {
             kalitini yozing.
           </p>
         )}
+        <RobotToggle />
         <ClearAiHistoryButton disabled={ai.chats + ai.insights === 0} />
       </CardContent>
     </Card>

@@ -321,6 +321,87 @@
   transition: opacity 0.2s;
 }
 
+/* Oydin robotcha (components/robot): tebranish, ko'z qisish, qo'l silkitish, olov, salto va "zzz" */
+@keyframes robot-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+@keyframes robot-blink {
+  0%,
+  93%,
+  100% {
+    transform: scaleY(1);
+  }
+  96% {
+    transform: scaleY(0.1);
+  }
+}
+@keyframes robot-wave {
+  0%,
+  100% {
+    transform: rotate(0);
+  }
+  50% {
+    transform: rotate(-32deg);
+  }
+}
+@keyframes robot-glow {
+  0%,
+  100% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
+@keyframes robot-flip {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes robot-z {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0) scale(0.6);
+  }
+  30% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(10px, -20px) scale(1);
+  }
+}
+
+@utility robot-bob {
+  animation: robot-bob 2.6s ease-in-out infinite;
+}
+@utility robot-blink {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: robot-blink 4.2s infinite;
+}
+@utility robot-wave {
+  animation: robot-wave 0.7s ease-in-out infinite;
+}
+@utility robot-glow {
+  transform-box: fill-box;
+  transform-origin: center top;
+  animation: robot-glow 1.4s ease-in-out infinite;
+}
+@utility robot-flip {
+  transform-origin: 50% 45%;
+  animation: robot-flip 0.9s cubic-bezier(0.45, 0, 0.2, 1);
+}
+@utility robot-z {
+  animation: robot-z 2.4s ease-out infinite;
+}
+
 /* Qurilmada "harakatni kamaytirish" yoqilgan bo'lsa — hammasi darhol */
 @media (prefers-reduced-motion: reduce) {
   *,
@@ -330,6 +411,14 @@
     animation-delay: 0ms !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+  /* Cheksiz takrorlanadigan bezak animatsiyalar umuman to'xtaydi */
+  .robot-bob,
+  .robot-blink,
+  .robot-wave,
+  .robot-glow,
+  .robot-z {
+    animation: none !important;
   }
 }
 
