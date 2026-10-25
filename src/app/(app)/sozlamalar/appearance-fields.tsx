@@ -2,6 +2,7 @@
 
 import { createElement, useState } from "react";
 import { Check, Plus, X } from "lucide-react";
+import { ColorField } from "@/components/ui/color-field";
 import { ICON_NAMES, getIcon } from "@/lib/icons";
 import { cn } from "@/lib/utils";
 
@@ -73,24 +74,25 @@ export function ColorPicker({ value, onChange }: { value: string; onChange: (col
           </button>
         );
       })}
-      {/* Boshqa rang — brauzerning rang tanlagichi */}
-      <label
-        className={cn(
-          "relative flex size-7 cursor-pointer items-center justify-center rounded-full border border-dashed text-muted-foreground hover:bg-accent",
-          custom && "border-solid",
-        )}
-        style={custom ? { backgroundColor: value, boxShadow: `0 0 0 2px var(--background), 0 0 0 4px ${value}` } : undefined}
-        title="Boshqa rang"
-      >
-        {custom ? <Check className="size-3.5 text-white" /> : <Plus className="size-3.5" />}
-        <input
-          type="color"
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          className="absolute inset-0 cursor-pointer opacity-0"
-          aria-label="Boshqa rang"
-        />
-      </label>
+      {/* Boshqa rang — o'zimizning rang tanlagich (to'yinganlik maydoni, tus chizig'i, HEX) */}
+      <ColorField
+        value={value}
+        onChange={onChange}
+        trigger={
+          <button
+            type="button"
+            aria-label="Boshqa rang"
+            title="Boshqa rang"
+            className={cn(
+              "relative flex size-7 cursor-pointer items-center justify-center rounded-full border border-dashed text-muted-foreground transition-transform hover:scale-110 hover:bg-accent",
+              custom && "border-solid",
+            )}
+            style={custom ? { backgroundColor: value, boxShadow: `0 0 0 2px var(--background), 0 0 0 4px ${value}` } : undefined}
+          >
+            {custom ? <Check className="size-3.5 text-white" /> : <Plus className="size-3.5" />}
+          </button>
+        }
+      />
     </div>
   );
 }

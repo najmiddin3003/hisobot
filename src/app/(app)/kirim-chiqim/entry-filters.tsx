@@ -6,7 +6,8 @@ import { Loader2, Search, X } from "lucide-react";
 import { ActivePill } from "@/components/motion/active-pill";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Combobox } from "@/components/ui/combobox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SOURCE_LABELS, SOURCES } from "@/lib/domain";
 import { FILTER_PARAMS, type EntryFilters, type EntryOptions } from "@/lib/entries";
 import { cn } from "@/lib/utils";
@@ -80,48 +81,29 @@ export function EntryFilterBar({
       </div>
 
       <div className="grid flex-1 grid-cols-2 gap-2 xl:grid-cols-4">
-        <Select
+        <Combobox
+          aria-label="Kategoriya"
           value={filters.categoryId ?? ALL}
-          onValueChange={(v) => update({ categoryId: v === ALL ? undefined : v })}
+          onChange={(v) => update({ categoryId: v === ALL ? undefined : v })}
           disabled={filters.type === "otkazma"}
-        >
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="Kategoriya" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={ALL}>Barcha kategoriyalar</SelectItem>
-            <SelectGroup>
-              <SelectLabel>Chiqim</SelectLabel>
-              {expenseCategories.map((c) => (
-                <SelectItem key={c.id} value={c.id}>
-                  {c.name}
-                </SelectItem>
-              ))}
-            </SelectGroup>
-            <SelectGroup>
-              <SelectLabel>Kirim</SelectLabel>
-              {incomeCategories.map((c) => (
-                <SelectItem key={c.id} value={c.id}>
-                  {c.name}
-                </SelectItem>
-              ))}
-            </SelectGroup>
-          </SelectContent>
-        </Select>
+          searchPlaceholder="Kategoriya qidirish..."
+          options={[
+            { value: ALL, label: "Barcha kategoriyalar" },
+            ...expenseCategories.map((c) => ({ value: c.id, label: c.name, group: "Chiqim", icon: c.icon, color: c.color })),
+            ...incomeCategories.map((c) => ({ value: c.id, label: c.name, group: "Kirim", icon: c.icon, color: c.color })),
+          ]}
+        />
 
-        <Select value={filters.walletId ?? ALL} onValueChange={(v) => update({ walletId: v === ALL ? undefined : v })}>
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="Hamyon" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={ALL}>Barcha hamyonlar</SelectItem>
-            {options.wallets.map((w) => (
-              <SelectItem key={w.id} value={w.id}>
-                {w.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <Combobox
+          aria-label="Hamyon"
+          value={filters.walletId ?? ALL}
+          onChange={(v) => update({ walletId: v === ALL ? undefined : v })}
+          searchPlaceholder="Hamyon qidirish..."
+          options={[
+            { value: ALL, label: "Barcha hamyonlar" },
+            ...options.wallets.map((w) => ({ value: w.id, label: w.name, icon: w.icon, color: w.color })),
+          ]}
+        />
 
         <Select value={filters.source ?? ALL} onValueChange={(v) => update({ source: v === ALL ? undefined : v })}>
           <SelectTrigger className="w-full">

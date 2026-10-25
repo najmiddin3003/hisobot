@@ -1,7 +1,7 @@
 "use client";
 
 import { createElement, useState, useTransition } from "react";
-import { CircleAlert, Clock, Loader2, Lock, LockOpen, Pencil, Trash2 } from "lucide-react";
+import { CircleAlert, Loader2, Lock, LockOpen, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { addDebtPayment, deleteDebt, deleteDebtPayment, setDebtClosed } from "@/app/(app)/qarzlar/actions";
 import { debtIcon, DebtProgress } from "@/components/debts/debt-card";
@@ -23,10 +23,11 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { DateTimePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { DebtItem } from "@/lib/data/debts";
-import { formatDate, formatDateTime, toDateTimeInput } from "@/lib/dates";
+import { formatDate, formatDateTime } from "@/lib/dates";
 import { daysText } from "@/lib/debts";
 import type { WalletOption } from "@/lib/entries";
 import { formatMoney } from "@/lib/money";
@@ -291,24 +292,7 @@ function PaymentForm({ debt, wallets, now }: { debt: DebtItem; wallets: WalletOp
         <WalletPicker wallets={wallets} value={walletId} onChange={setWalletId} />
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
-        <div className="flex gap-2">
-          <Input
-            type="datetime-local"
-            value={occurredAt}
-            onChange={(e) => setOccurredAt(e.target.value)}
-            className="h-9 min-w-0 flex-1"
-            aria-label="Sana va vaqt"
-          />
-          <Button
-            type="button"
-            variant="outline"
-            size="icon-lg"
-            aria-label="Hozirgi vaqt"
-            onClick={() => setOccurredAt(toDateTimeInput(new Date()))}
-          >
-            <Clock />
-          </Button>
-        </div>
+        <DateTimePicker value={occurredAt} onChange={setOccurredAt} aria-label="Sana va vaqt" />
         <Input
           value={note}
           onChange={(e) => setNote(e.target.value)}

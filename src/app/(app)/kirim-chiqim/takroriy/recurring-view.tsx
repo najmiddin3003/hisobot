@@ -25,7 +25,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { MonthDayPicker } from "@/components/ui/month-day-picker";
 import { Switch } from "@/components/ui/switch";
 import type { RecurringItem } from "@/lib/data/entries";
 import { formatDate } from "@/lib/dates";
@@ -193,7 +193,6 @@ function RecurringCard({ item, onEdit }: { item: RecurringItem; onEdit: () => vo
   );
 }
 
-const DAYS = Array.from({ length: 31 }, (_, i) => i + 1);
 
 function RecurringForm({
   item,
@@ -303,19 +302,8 @@ function RecurringForm({
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">
-          <Label>Har oyning qaysi kuni</Label>
-          <Select value={String(dayOfMonth)} onValueChange={(v) => setDayOfMonth(Number(v))}>
-            <SelectTrigger className="w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent className="max-h-64">
-              {DAYS.map((d) => (
-                <SelectItem key={d} value={String(d)}>
-                  {d}-kuni
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Label>To&apos;lov kuni</Label>
+          <MonthDayPicker value={dayOfMonth} onChange={setDayOfMonth} />
         </div>
         <div className="space-y-2">
           <Label htmlFor="recurring-note">Izoh</Label>

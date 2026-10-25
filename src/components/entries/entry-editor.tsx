@@ -2,7 +2,7 @@
 
 import { createContext, use, useId, useState, useTransition } from "react";
 import Link from "next/link";
-import { ArrowLeftRight, CircleAlert, Clock, HandCoins, Loader2, Minus, Plus, Trash2 } from "lucide-react";
+import { ArrowLeftRight, CircleAlert, HandCoins, Loader2, Minus, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   deleteEntry,
@@ -17,6 +17,7 @@ import { CategoryPicker, WalletPicker } from "@/components/entries/option-picker
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { DateTimePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { formatDateTime, toDateTimeInput } from "@/lib/dates";
@@ -291,26 +292,7 @@ function EntryForm({ payload, options, onDone }: { payload: Payload; options: En
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="entry-date">Sana va vaqt</Label>
-          <div className="flex gap-2">
-            <Input
-              id="entry-date"
-              type="datetime-local"
-              value={occurredAt}
-              onChange={(e) => setOccurredAt(e.target.value)}
-              required
-              className="h-9 min-w-0 flex-1"
-            />
-            <Button
-              type="button"
-              variant="outline"
-              size="icon-lg"
-              title="Hozirgi vaqt"
-              aria-label="Hozirgi vaqt"
-              onClick={() => setOccurredAt(toDateTimeInput(new Date()))}
-            >
-              <Clock />
-            </Button>
-          </div>
+          <DateTimePicker id="entry-date" value={occurredAt} onChange={setOccurredAt} />
         </div>
         <div className="space-y-2">
           <Label htmlFor="entry-note">Izoh</Label>

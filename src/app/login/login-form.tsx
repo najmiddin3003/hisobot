@@ -1,13 +1,14 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState } from "react";
 import { useSearchParams } from "next/navigation";
-import { CircleAlert, Eye, EyeOff, Info, Loader2, LogIn } from "lucide-react";
+import { CircleAlert, Info, Loader2, LogIn } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PasswordInput } from "@/components/ui/password-input";
 import { LOGIN_REASONS, type LoginReason } from "@/lib/auth/constants";
 import { loginAction } from "./actions";
 
@@ -24,7 +25,6 @@ export function LoginReasonAlert() {
 
 export function LoginForm() {
   const [state, formAction, pending] = useActionState(loginAction, undefined);
-  const [showPassword, setShowPassword] = useState(false);
 
   return (
     <Card>
@@ -56,26 +56,7 @@ export function LoginForm() {
           </div>
           <div className="space-y-2">
             <Label htmlFor="password">Parol</Label>
-            <div className="relative">
-              <Input
-                id="password"
-                name="password"
-                type={showPassword ? "text" : "password"}
-                autoComplete="current-password"
-                required
-                className="h-10 pr-10"
-              />
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-sm"
-                className="absolute top-1/2 right-1.5 -translate-y-1/2 text-muted-foreground"
-                onClick={() => setShowPassword((v) => !v)}
-                aria-label={showPassword ? "Parolni yashirish" : "Parolni ko'rsatish"}
-              >
-                {showPassword ? <EyeOff /> : <Eye />}
-              </Button>
-            </div>
+            <PasswordInput id="password" name="password" autoComplete="current-password" required className="h-10" />
           </div>
           <Button type="submit" className="h-10 w-full" disabled={pending}>
             {pending ? <Loader2 className="animate-spin" /> : <LogIn />}

@@ -11,9 +11,11 @@ import { ActivePill } from "@/components/motion/active-pill";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { DateTimePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { MonthDayPicker } from "@/components/ui/month-day-picker";
+import { NumberInput } from "@/components/ui/number-input";
 import { Switch } from "@/components/ui/switch";
 import type { DebtItem } from "@/lib/data/debts";
 import { toDateInput, toDateTimeInput } from "@/lib/dates";
@@ -22,7 +24,6 @@ import type { WalletOption } from "@/lib/entries";
 import { formatAmount, formatMoney } from "@/lib/money";
 import { cn } from "@/lib/utils";
 
-const DAYS = Array.from({ length: 31 }, (_, i) => i + 1);
 
 export function DebtForm({
   direction,
@@ -167,26 +168,17 @@ export function DebtForm({
           </div>
           <div className="space-y-2">
             <Label>To&apos;lov kuni</Label>
-            <Select value={String(paymentDay)} onValueChange={(v) => setPaymentDay(Number(v))}>
-              <SelectTrigger className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="max-h-64">
-                {DAYS.map((d) => (
-                  <SelectItem key={d} value={String(d)}>
-                    Har oyning {d}-kuni
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <MonthDayPicker value={paymentDay} onChange={setPaymentDay} />
           </div>
           <div className="space-y-2">
             <Label htmlFor="debt-term">Muddati (oy)</Label>
-            <Input
+            <NumberInput
               id="debt-term"
-              inputMode="numeric"
               value={termMonths}
-              onChange={(e) => setTermMonths(e.target.value.replace(/\D/g, "").slice(0, 3))}
+              onChange={setTermMonths}
+              min={1}
+              max={600}
+              suffix="oy"
               placeholder="Masalan: 24"
             />
           </div>
@@ -202,33 +194,23 @@ export function DebtForm({
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="debt-date">{isCredit ? "Kredit olingan sana" : "Qachon"}</Label>
-          <Input
-            id="debt-date"
-            type="datetime-local"
-            value={startedAt}
-            onChange={(e) => setStartedAt(e.target.value)}
-            className="h-9"
-          />
+          <DateTimePicker id="debt-date" value={startedAt} onChange={setStartedAt} />
         </div>
         {isCredit ? (
           <div className="space-y-2">
             <Label htmlFor="debt-paid-months">Allaqachon to&apos;langan oylar</Label>
-            <Input
-              id="debt-paid-months"
-              inputMode="numeric"
-              value={paidMonths}
-              onChange={(e) => setPaidMonths(e.target.value.replace(/\D/g, "").slice(0, 3))}
-            />
+            <NumberInput id="debt-paid-months" value={paidMonths} onChange={setPaidMonths} max={600} suffix="oy" placeholder="0" />
           </div>
         ) : (
           <div className="space-y-2">
             <Label htmlFor="debt-due">Qaytarish muddati (ixtiyoriy)</Label>
-            <Input
+            <DateTimePicker
               id="debt-due"
-              type="date"
               value={dueDate}
-              onChange={(e) => setDueDate(e.target.value)}
-              className="h-9"
+              onChange={setDueDate}
+              withTime={false}
+              clearable
+              placeholder="Muddatsiz"
             />
           </div>
         )}

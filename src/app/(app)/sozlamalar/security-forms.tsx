@@ -16,8 +16,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PasswordInput } from "@/components/ui/password-input";
 import { MIN_PASSWORD_LENGTH } from "@/lib/auth/constants";
 import {
   changePasswordAction,
@@ -44,14 +44,13 @@ export function ChangePasswordForm() {
       )}
       <div className="space-y-1.5">
         <Label htmlFor="current">Joriy parol</Label>
-        <Input id="current" name="current" type="password" autoComplete="current-password" required />
+        <PasswordInput id="current" name="current" autoComplete="current-password" required />
       </div>
       <div className="space-y-1.5">
         <Label htmlFor="next">Yangi parol</Label>
-        <Input
+        <PasswordInput
           id="next"
           name="next"
-          type="password"
           autoComplete="new-password"
           minLength={MIN_PASSWORD_LENGTH}
           required
@@ -59,7 +58,7 @@ export function ChangePasswordForm() {
       </div>
       <div className="space-y-1.5">
         <Label htmlFor="confirm">Yangi parolni takrorlang</Label>
-        <Input id="confirm" name="confirm" type="password" autoComplete="new-password" required />
+        <PasswordInput id="confirm" name="confirm" autoComplete="new-password" required />
       </div>
       <Button type="submit" className="w-full" disabled={pending}>
         {pending ? <Loader2 className="animate-spin" /> : <KeyRound />}
