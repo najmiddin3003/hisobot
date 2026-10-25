@@ -28,7 +28,7 @@ export default function DashboardPage({ searchParams }: PageProps<"/">) {
     <>
       <PageHeader title="Dashboard" description="Oylik moliyaviy holatingiz bir qarashda" />
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="stagger grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
         <Suspense fallback={<DashboardSkeleton />}>
           <DashboardContent searchParams={searchParams} />
         </Suspense>

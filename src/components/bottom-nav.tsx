@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { ActivePill } from "@/components/motion/active-pill";
 import { DEBT_NAV, MAIN_NAV, findNavItem, type NavItem } from "@/lib/nav";
 import { cn } from "@/lib/utils";
 
@@ -38,17 +39,18 @@ function Tab({ item, active }: { item: NavItem; active: boolean }) {
       href={item.href}
       aria-current={active ? "page" : undefined}
       className={cn(
-        "flex min-w-0 flex-col items-center gap-1 text-[11px] leading-none font-medium transition-colors",
+        "flex min-w-0 flex-col items-center gap-1 text-[11px] leading-none font-medium transition-[color,transform] duration-200 active:scale-95",
         active ? "text-foreground" : "text-muted-foreground",
       )}
     >
       <span
         className={cn(
-          "flex h-7 w-12 items-center justify-center rounded-full transition-colors",
-          active && "bg-primary text-primary-foreground",
+          "relative flex h-7 w-12 items-center justify-center rounded-full transition-colors duration-200",
+          active && "text-primary-foreground",
         )}
       >
-        <item.icon className="size-4.5" />
+        {active && <ActivePill layoutId="bottom-nav" />}
+        <item.icon className="relative size-4.5" />
       </span>
       <span className="max-w-full truncate px-0.5">{item.label}</span>
     </Link>

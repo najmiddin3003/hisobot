@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Coins, Sparkles } from "lucide-react";
 import { openAssistant } from "@/components/ai/open-assistant";
+import { ActivePill } from "@/components/motion/active-pill";
 import { MonthPicker, MonthPickerFallback } from "@/components/month-picker";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
@@ -46,11 +47,13 @@ export function AppHeader({ quickAdd, userMenu }: { quickAdd: React.ReactNode; u
                 href={item.href}
                 aria-current={active ? "page" : undefined}
                 className={cn(
-                  "rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors",
-                  active ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                  "relative rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors duration-200",
+                  active ? "text-primary-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground",
                 )}
               >
-                {item.label}
+                {/* Tanlangan bo'lim foni bir tugmadan ikkinchisiga sirpanib o'tadi */}
+                {active && <ActivePill layoutId="top-nav" />}
+                <span className="relative">{item.label}</span>
               </Link>
             );
           })}

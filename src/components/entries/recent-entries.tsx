@@ -2,8 +2,10 @@
 
 import Link from "next/link";
 import { ArrowRight, Minus, Plus, ReceiptText } from "lucide-react";
+import { AnimatePresence } from "motion/react";
 import { EntryEditorProvider, useEntryEditor } from "@/components/entries/entry-editor";
 import { EntryRow } from "@/components/entries/entry-row";
+import { Collapse } from "@/components/motion/collapse";
 import { Button } from "@/components/ui/button";
 import { Card, CardAction, CardHeader, CardTitle } from "@/components/ui/card";
 import type { Entry, EntryOptions } from "@/lib/entries";
@@ -34,9 +36,13 @@ function RecentEntriesCard({ entries }: { entries: Entry[] }) {
       </CardHeader>
       {entries.length > 0 ? (
         <div className="divide-y">
-          {entries.map((entry) => (
-            <EntryRow key={`${entry.kind}-${entry.id}`} entry={entry} withDate onClick={() => editor.openEdit(entry)} />
-          ))}
+          <AnimatePresence initial={false}>
+            {entries.map((entry) => (
+              <Collapse key={`${entry.kind}-${entry.id}`}>
+                <EntryRow entry={entry} withDate onClick={() => editor.openEdit(entry)} />
+              </Collapse>
+            ))}
+          </AnimatePresence>
         </div>
       ) : (
         <div className="flex flex-col items-center gap-2 p-8 text-center text-sm text-muted-foreground">

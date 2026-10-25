@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useId, useState, useTransition } from "react";
 import { CircleAlert, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { ColorIcon } from "@/components/color-icon";
 import { AmountInput } from "@/components/entries/amount-input";
+import { ActivePill } from "@/components/motion/active-pill";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -27,6 +28,7 @@ function Segmented<T extends string>({
   onChange: (value: T) => void;
   disabled?: boolean;
 }) {
+  const pillId = useId();
   return (
     <div className={cn("grid gap-1 rounded-full bg-muted p-1", disabled && "opacity-60")} style={{ gridTemplateColumns: `repeat(${options.length}, 1fr)` }}>
       {options.map((o) => (
@@ -36,11 +38,12 @@ function Segmented<T extends string>({
           disabled={disabled}
           onClick={() => onChange(o.value)}
           className={cn(
-            "rounded-full px-3 py-1.5 text-sm font-medium transition-colors disabled:cursor-not-allowed",
-            value === o.value ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
+            "relative rounded-full px-3 py-1.5 text-sm font-medium transition-colors duration-200 disabled:cursor-not-allowed",
+            value === o.value ? "text-foreground" : "text-muted-foreground hover:text-foreground",
           )}
         >
-          {o.label}
+          {value === o.value && <ActivePill layoutId={pillId} className="bg-card shadow-sm" />}
+          <span className="relative">{o.label}</span>
         </button>
       ))}
     </div>

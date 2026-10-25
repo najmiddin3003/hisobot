@@ -56,7 +56,7 @@ function BudgetBody({ data }: { data: BudgetOverview }) {
 
       <section className="space-y-3">
         <h2 className="font-heading text-xl font-medium">Hamyonlar</h2>
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="stagger grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {data.wallets.map((wallet) => (
             <WalletCard
               key={wallet.id}
@@ -153,7 +153,7 @@ function TotalCard({
                 <div
                   key={w.id}
                   title={`${w.name}: ${formatMoney(w.balance)}`}
-                  className="h-full first:rounded-l-full last:rounded-r-full"
+                  className="bar-grow h-full first:rounded-l-full last:rounded-r-full"
                   style={{ width: `${(w.balance / positiveTotal) * 100}%`, backgroundColor: w.color }}
                 />
               ))}

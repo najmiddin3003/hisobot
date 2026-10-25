@@ -7,6 +7,7 @@ import { DebtCard } from "@/components/debts/debt-card";
 import { DebtDetails } from "@/components/debts/debt-details";
 import { DebtForm } from "@/components/debts/debt-form";
 import { Money } from "@/components/money";
+import { ActivePill } from "@/components/motion/active-pill";
 import { StatCard } from "@/components/stat-card";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -71,7 +72,7 @@ export function DebtsView({ direction, data }: { direction: DebtDirection; data:
               <span className="font-sans text-sm font-normal text-muted-foreground">{items.length} ta ochiq</span>
             </h2>
             {items.length > 0 ? (
-              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              <div className="stagger grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                 {items.map((debt) => (
                   <DebtCard key={debt.id} debt={debt} onOpen={() => details(debt.id)} onPay={() => details(debt.id)} />
                 ))}
@@ -101,7 +102,7 @@ export function DebtsView({ direction, data }: { direction: DebtDirection; data:
             <ChevronDown className="size-4 transition-transform group-open:rotate-180" />
             Yopilganlar ({closedItems.length})
           </summary>
-          <div className="mt-3 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          <div className="stagger mt-3 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {closedItems.map((debt) => (
               <DebtCard key={debt.id} debt={debt} onOpen={() => details(debt.id)} onPay={() => details(debt.id)} />
             ))}
@@ -152,7 +153,7 @@ function Summary({ direction, items }: { direction: DebtDirection; items: DebtIt
   const monthlyCredits = items.filter((d) => d.kind === "kredit").reduce((sum, d) => sum + (d.monthlyPayment ?? 0), 0);
 
   return (
-    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    <div className="stagger grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
       <StatCard
         label={direction === "olingan" ? "Qaytarishim kerak" : "Menga qaytarishi kerak"}
         value={<Money amount={remaining} />}
@@ -210,11 +211,12 @@ function DebtSwitch({ direction }: { direction: DebtDirection }) {
           aria-current={tab.active ? "page" : undefined}
           className={
             tab.active
-              ? "rounded-full bg-card py-2 text-center text-sm font-medium shadow-sm"
-              : "rounded-full py-2 text-center text-sm font-medium text-muted-foreground"
+              ? "relative rounded-full py-2 text-center text-sm font-medium"
+              : "relative rounded-full py-2 text-center text-sm font-medium text-muted-foreground"
           }
         >
-          {tab.label}
+          {tab.active && <ActivePill layoutId="debt-switch" className="bg-card shadow-sm" />}
+          <span className="relative">{tab.label}</span>
         </Link>
       ))}
     </nav>

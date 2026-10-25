@@ -311,7 +311,7 @@ function EmptyState({ disabled, onPick }: { disabled: boolean; onPick: (prompt: 
 
 function UserTurn({ turn }: { turn: UiTurn }) {
   return (
-    <div className="flex flex-col items-end gap-1">
+    <div className="flex animate-in flex-col items-end gap-1 duration-300 ease-out fade-in slide-in-from-bottom-2">
       <div className="max-w-[85%] rounded-2xl rounded-br-md bg-primary px-3.5 py-2 text-sm whitespace-pre-wrap text-primary-foreground">
         {turn.text}
       </div>
@@ -325,7 +325,7 @@ function UserTurn({ turn }: { turn: UiTurn }) {
 function BotTurn({ turn }: { turn: UiTurn }) {
   const waiting = turn.pending && !turn.text;
   return (
-    <div className="flex gap-2.5">
+    <div className="flex animate-in gap-2.5 duration-300 ease-out fade-in slide-in-from-bottom-2">
       <div className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
         <Sparkles className="size-3.5" />
       </div>

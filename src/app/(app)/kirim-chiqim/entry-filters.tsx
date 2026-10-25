@@ -3,6 +3,7 @@
 import { useEffect, useState, useTransition } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Loader2, Search, X } from "lucide-react";
+import { ActivePill } from "@/components/motion/active-pill";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -68,13 +69,12 @@ export function EntryFilterBar({
             type="button"
             onClick={() => update({ type: tab.value, categoryId: tab.value === "otkazma" ? undefined : filters.categoryId })}
             className={cn(
-              "shrink-0 rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors",
-              filters.type === tab.value
-                ? "bg-card text-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground",
+              "relative shrink-0 rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors duration-200",
+              filters.type === tab.value ? "text-foreground" : "text-muted-foreground hover:text-foreground",
             )}
           >
-            {tab.label}
+            {filters.type === tab.value && <ActivePill layoutId="entry-type-filter" className="bg-card shadow-sm" />}
+            <span className="relative">{tab.label}</span>
           </button>
         ))}
       </div>

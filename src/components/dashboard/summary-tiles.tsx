@@ -62,8 +62,8 @@ function SpendBar({ income, expense }: { income: number; expense: number }) {
         role="img"
         aria-label={`Kirimning ${spentPct}% i sarflandi`}
       >
-        {spent > 0 && <div className="h-full rounded-l-full bg-chart-expense" style={{ width: `${spent * 100}%` }} />}
-        {spent < 1 && <div className="h-full flex-1 rounded-r-full bg-chart-income" />}
+        {spent > 0 && <div className="bar-grow h-full rounded-l-full bg-chart-expense" style={{ width: `${spent * 100}%` }} />}
+        {spent < 1 && <div className="bar-grow h-full flex-1 rounded-r-full bg-chart-income [animation-delay:120ms]" />}
       </div>
       <div className="flex justify-between text-xs text-muted-foreground">
         <span className="flex items-center gap-1.5">

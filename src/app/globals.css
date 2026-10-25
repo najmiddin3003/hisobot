@@ -195,6 +195,87 @@
   line-height: 1.1;
 }
 
+/*
+  Harakat. Kirish animatsiyalari CSS'da — JS yuklanishini kutmaydi, sahifa sekinlashmaydi.
+  fill-mode: backwards — tugagach elementda transform qolmaydi (sticky/fixed buzilmaydi).
+*/
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.985);
+  }
+}
+
+@keyframes page-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+@keyframes bar-grow {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+/* Sahifa almashganda (template.tsx) */
+@utility animate-page-in {
+  animation: page-in 0.35s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+}
+
+/* Bitta element pastdan ko'tarilib paydo bo'ladi */
+@utility animate-rise {
+  animation: rise 0.55s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+}
+
+/* Bento bloklari va kartochkalar ketma-ket ko'tarilib chiqadi */
+@utility stagger {
+  & > * {
+    animation: rise 0.55s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+  }
+  & > :nth-child(2) {
+    animation-delay: 50ms;
+  }
+  & > :nth-child(3) {
+    animation-delay: 100ms;
+  }
+  & > :nth-child(4) {
+    animation-delay: 150ms;
+  }
+  & > :nth-child(5) {
+    animation-delay: 200ms;
+  }
+  & > :nth-child(6) {
+    animation-delay: 240ms;
+  }
+  & > :nth-child(7) {
+    animation-delay: 280ms;
+  }
+  & > :nth-child(n + 8) {
+    animation-delay: 320ms;
+  }
+}
+
+/* Ulush chiziqlari: paydo bo'lganda chapdan o'sadi, qiymat o'zgarsa kengligi silliq o'zgaradi */
+@utility bar-grow {
+  transform-origin: left;
+  animation: bar-grow 0.9s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+  transition: width 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Qurilmada "harakatni kamaytirish" yoqilgan bo'lsa — hammasi darhol */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 /* Mavzu almashganda: standart xira o'tish o'rniga doira bo'lib yoyilish (theme-toggle.tsx) */
 ::view-transition-old(root),
 ::view-transition-new(root) {

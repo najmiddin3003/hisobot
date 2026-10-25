@@ -55,7 +55,7 @@ export function CategoryBreakdown({ data, className }: { data: Dashboard; classN
                     {/* Bitta rang (chiqim) — uzunlik miqdorni bildiradi; kategoriya ikonkasi o'z rangida */}
                     <div className="h-2 flex-1 overflow-hidden rounded-full bg-muted">
                       <div
-                        className="h-full rounded-full bg-chart-expense"
+                        className="bar-grow h-full rounded-full bg-chart-expense"
                         style={{ width: `${max > 0 ? (row.amount / max) * 100 : 0}%` }}
                       />
                     </div>

@@ -7,6 +7,7 @@ import { saveDebt } from "@/app/(app)/qarzlar/actions";
 import { DEBT_TEXT } from "@/components/debts/debt-text";
 import { AmountInput } from "@/components/entries/amount-input";
 import { WalletPicker } from "@/components/entries/option-pickers";
+import { ActivePill } from "@/components/motion/active-pill";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -123,11 +124,12 @@ export function DebtForm({
               type="button"
               onClick={() => setKind(value)}
               className={cn(
-                "flex items-center justify-center gap-1.5 rounded-full py-2 text-sm font-medium transition-colors",
-                kind === value ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
+                "relative flex items-center justify-center gap-1.5 rounded-full py-2 text-sm font-medium transition-colors duration-200",
+                kind === value ? "text-foreground" : "text-muted-foreground hover:text-foreground",
               )}
             >
-              <Icon className="size-4" /> {label}
+              {kind === value && <ActivePill layoutId="debt-form-kind" className="bg-card shadow-sm" />}
+              <Icon className="relative size-4" /> <span className="relative">{label}</span>
             </button>
           ))}
         </div>

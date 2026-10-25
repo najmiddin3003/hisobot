@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { List, Repeat, Trash2 } from "lucide-react";
+import { ActivePill } from "@/components/motion/active-pill";
 import { cn } from "@/lib/utils";
 
 const TABS = [
@@ -23,14 +24,15 @@ export function SubNav() {
             href={tab.href}
             aria-current={active ? "page" : undefined}
             className={cn(
-              "flex shrink-0 items-center gap-2 rounded-full border px-3.5 py-1.5 text-sm font-medium transition-colors",
+              "relative flex shrink-0 items-center gap-2 rounded-full border px-3.5 py-1.5 text-sm font-medium transition-colors duration-200",
               active
-                ? "border-primary bg-primary text-primary-foreground"
+                ? "border-transparent text-primary-foreground"
                 : "border-input text-muted-foreground hover:bg-muted hover:text-foreground",
             )}
           >
-            <tab.icon className="size-4" />
-            {tab.label}
+            {active && <ActivePill layoutId="entries-sub-nav" />}
+            <tab.icon className="relative size-4" />
+            <span className="relative">{tab.label}</span>
           </Link>
         );
       })}

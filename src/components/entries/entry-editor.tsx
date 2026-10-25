@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, use, useState, useTransition } from "react";
+import { createContext, use, useId, useState, useTransition } from "react";
 import Link from "next/link";
 import { ArrowLeftRight, CircleAlert, Clock, HandCoins, Loader2, Minus, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
@@ -12,6 +12,7 @@ import {
   type ActionResult,
 } from "@/app/(app)/kirim-chiqim/actions";
 import { AmountInput } from "@/components/entries/amount-input";
+import { ActivePill } from "@/components/motion/active-pill";
 import { CategoryPicker, WalletPicker } from "@/components/entries/option-pickers";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -96,10 +97,11 @@ export function EntryEditorProvider({ options, children }: { options: EntryOptio
   );
 }
 
-const KIND_META: Record<EntryKind, { label: string; icon: typeof Plus; active: string }> = {
-  chiqim: { label: "Chiqim", icon: Minus, active: "bg-expense text-primary-foreground" },
-  kirim: { label: "Kirim", icon: Plus, active: "bg-income text-primary-foreground" },
-  otkazma: { label: "O'tkazma", icon: ArrowLeftRight, active: "bg-primary text-primary-foreground" },
+// pill — tanlangan tur foni (sirpanib o'tayotganda rangi ham silliq almashadi)
+const KIND_META: Record<EntryKind, { label: string; icon: typeof Plus; pill: string }> = {
+  chiqim: { label: "Chiqim", icon: Minus, pill: "bg-expense" },
+  kirim: { label: "Kirim", icon: Plus, pill: "bg-income" },
+  otkazma: { label: "O'tkazma", icon: ArrowLeftRight, pill: "bg-primary" },
 };
 
 async function undoableDelete(entry: Entry, onDone: () => void) {
@@ -144,6 +146,8 @@ function EntryForm({ payload, options, onDone }: { payload: Payload; options: En
   const [note, setNote] = useState(editing?.note ?? preset?.note ?? "");
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  // Bir sahifada bir nechta oyna bo'lishi mumkin — sirpanuvchi fon nomi har biriga alohida
+  const pillId = useId();
 
   if (tx?.debtId) {
     return (
@@ -231,11 +235,14 @@ function EntryForm({ payload, options, onDone }: { payload: Payload; options: En
                 type="button"
                 onClick={() => changeKind(k)}
                 className={cn(
-                  "flex items-center justify-center gap-1.5 rounded-full py-2 text-sm font-medium transition-colors",
-                  kind === k ? meta.active : "text-muted-foreground hover:text-foreground",
+                  "relative flex items-center justify-center gap-1.5 rounded-full py-2 text-sm font-medium transition-colors duration-200",
+                  kind === k ? "text-primary-foreground" : "text-muted-foreground hover:text-foreground",
                 )}
               >
-                <meta.icon className="size-4" /> {meta.label}
+                {kind === k && (
+                  <ActivePill layoutId={`${pillId}-kind`} className={cn("transition-colors duration-300", meta.pill)} />
+                )}
+                <meta.icon className="relative size-4" /> <span className="relative">{meta.label}</span>
               </button>
             );
           })}

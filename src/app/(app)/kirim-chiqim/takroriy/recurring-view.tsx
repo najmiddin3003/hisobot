@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { ColorIcon } from "@/components/color-icon";
 import { AmountInput } from "@/components/entries/amount-input";
 import { Money } from "@/components/money";
+import { ActivePill } from "@/components/motion/active-pill";
 import { CategoryPicker, WalletPicker } from "@/components/entries/option-pickers";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
@@ -76,7 +77,7 @@ export function RecurringView({ items, options }: { items: RecurringItem[]; opti
       </Card>
 
       {items.length > 0 ? (
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="stagger grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {items.map((item) => (
             <RecurringCard key={item.id} item={item} onEdit={() => open(item)} />
           ))}
@@ -250,16 +251,18 @@ function RecurringForm({
             type="button"
             onClick={() => changeType(t)}
             className={cn(
-              "flex items-center justify-center gap-1.5 rounded-full py-2 text-sm font-medium transition-colors",
-              type === t
-                ? t === "chiqim"
-                  ? "bg-expense text-primary-foreground"
-                  : "bg-income text-primary-foreground"
-                : "text-muted-foreground hover:text-foreground",
+              "relative flex items-center justify-center gap-1.5 rounded-full py-2 text-sm font-medium transition-colors duration-200",
+              type === t ? "text-primary-foreground" : "text-muted-foreground hover:text-foreground",
             )}
           >
-            {t === "chiqim" ? <Minus className="size-4" /> : <Plus className="size-4" />}
-            {t === "chiqim" ? "Chiqim" : "Kirim"}
+            {type === t && (
+              <ActivePill
+                layoutId="recurring-type"
+                className={cn("transition-colors duration-300", t === "chiqim" ? "bg-expense" : "bg-income")}
+              />
+            )}
+            {t === "chiqim" ? <Minus className="relative size-4" /> : <Plus className="relative size-4" />}
+            <span className="relative">{t === "chiqim" ? "Chiqim" : "Kirim"}</span>
           </button>
         ))}
       </div>

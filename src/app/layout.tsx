@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Fraunces, Geist, Geist_Mono } from "next/font/google";
+import { MotionProvider } from "@/components/motion/provider";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -49,7 +50,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="min-h-full">
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
-          <TooltipProvider>{children}</TooltipProvider>
+          <MotionProvider>
+            <TooltipProvider>{children}</TooltipProvider>
+          </MotionProvider>
           <Toaster richColors position="top-center" />
         </ThemeProvider>
       </body>

@@ -23,7 +23,7 @@ export function DebtProgress({ debt }: { debt: DebtItem }) {
     <div className="space-y-1.5">
       <div className="h-2 overflow-hidden rounded-full bg-muted">
         <div
-          className={cn("h-full rounded-full", debt.direction === "olingan" ? "bg-debt" : "bg-receivable")}
+          className={cn("bar-grow h-full rounded-full", debt.direction === "olingan" ? "bg-debt" : "bg-receivable")}
           style={{ width: `${percent}%` }}
         />
       </div>
@@ -50,7 +50,7 @@ export function DebtCard({ debt, onOpen, onPay }: { debt: DebtItem; onOpen: () =
       onClick={onOpen}
       onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), onOpen())}
       className={cn(
-        "cursor-pointer transition-shadow hover:ring-foreground/20 focus-visible:ring-2 focus-visible:ring-ring",
+        "cursor-pointer transition-[box-shadow,translate] duration-300 ease-out hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/5 hover:ring-foreground/20 focus-visible:ring-2 focus-visible:ring-ring active:translate-y-0",
         debt.overdue && "ring-expense/50",
         debt.closed && "opacity-75",
       )}

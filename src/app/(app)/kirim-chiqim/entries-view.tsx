@@ -3,8 +3,10 @@
 import { useState } from "react";
 import { ArrowLeftRight, FileSearch, Minus, Plus, ReceiptText } from "lucide-react";
 import { EntryEditorProvider, useEntryEditor } from "@/components/entries/entry-editor";
+import { AnimatePresence } from "motion/react";
 import { EntryRow } from "@/components/entries/entry-row";
 import { Money } from "@/components/money";
+import { Collapse } from "@/components/motion/collapse";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import type { DayGroup, EntryFilters, EntryOptions } from "@/lib/entries";
@@ -59,27 +61,36 @@ function EntriesBody({
 
       <EntryFilterBar filters={filters} options={options} onPendingChange={setLoading} />
 
-      <div className={cn("space-y-4 transition-opacity", loading && "pointer-events-none opacity-60")}>
+      {/* Kunlar oralig'i pb-4 bilan (margin emas) — guruh yig'ilib yo'qolganda bo'shliq ham silliq yo'qoladi */}
+      <div className={cn("stagger transition-opacity", loading && "pointer-events-none opacity-60")}>
         {filtered && groups.length > 0 && (
-          <p className="text-sm text-muted-foreground">Filtr bo&apos;yicha topildi: {shownCount} ta yozuv</p>
+          <p className="pb-4 text-sm text-muted-foreground">Filtr bo&apos;yicha topildi: {shownCount} ta yozuv</p>
         )}
 
-        {groups.map((group) => (
-          <Card key={group.key} className="gap-0 py-0">
-            <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b px-4 py-3">
-              <span className="font-heading text-base font-medium">{group.heading}</span>
-              <span className="flex gap-3 text-xs font-medium tabular-nums">
-                {group.income > 0 && <span className="text-income">+{formatAmount(group.income)}</span>}
-                {group.expense > 0 && <span className="text-expense">−{formatAmount(group.expense)}</span>}
-              </span>
-            </div>
-            <div className="divide-y">
-              {group.entries.map((entry) => (
-                <EntryRow key={`${entry.kind}-${entry.id}`} entry={entry} onClick={() => editor.openEdit(entry)} />
-              ))}
-            </div>
-          </Card>
-        ))}
+        <AnimatePresence initial={false}>
+          {groups.map((group) => (
+            <Collapse key={group.key} className="pb-4">
+              <Card className="gap-0 py-0">
+                <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b px-4 py-3">
+                  <span className="font-heading text-base font-medium">{group.heading}</span>
+                  <span className="flex gap-3 text-xs font-medium tabular-nums">
+                    {group.income > 0 && <span className="text-income">+{formatAmount(group.income)}</span>}
+                    {group.expense > 0 && <span className="text-expense">−{formatAmount(group.expense)}</span>}
+                  </span>
+                </div>
+                <div className="divide-y">
+                  <AnimatePresence initial={false}>
+                    {group.entries.map((entry) => (
+                      <Collapse key={`${entry.kind}-${entry.id}`}>
+                        <EntryRow entry={entry} onClick={() => editor.openEdit(entry)} />
+                      </Collapse>
+                    ))}
+                  </AnimatePresence>
+                </div>
+              </Card>
+            </Collapse>
+          ))}
+        </AnimatePresence>
 
         {groups.length === 0 && <EmptyState filtered={filtered} onAdd={() => editor.openNew("chiqim")} />}
       </div>

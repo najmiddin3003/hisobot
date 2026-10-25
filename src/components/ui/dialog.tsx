@@ -39,7 +39,7 @@ function DialogOverlay({
     <DialogPrimitive.Overlay
       data-slot="dialog-overlay"
       className={cn(
-        "fixed inset-0 isolate z-50 bg-black/10 duration-100 supports-backdrop-filter:backdrop-blur-xs data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
+        "fixed inset-0 isolate z-50 bg-black/20 supports-backdrop-filter:backdrop-blur-[2px] data-open:animate-in data-open:fade-in-0 data-open:duration-300 data-closed:animate-out data-closed:fade-out-0 data-closed:duration-200",
         className
       )}
       {...props}
@@ -61,7 +61,11 @@ function DialogContent({
       <DialogPrimitive.Content
         data-slot="dialog-content"
         className={cn(
-          "fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 rounded-2xl bg-popover p-5 text-sm text-popover-foreground ring-1 ring-foreground/10 duration-100 outline-none sm:max-w-sm data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+          // Telefonda — pastdan chiqadigan varaq (bottom sheet), kattaroq ekranda — markazda yumshoq kattalashib
+          "fixed z-50 grid w-full gap-4 bg-popover p-5 text-sm text-popover-foreground ring-1 ring-foreground/10 outline-none ease-[cubic-bezier(0.16,1,0.3,1)] data-open:animate-in data-closed:animate-out",
+          "inset-x-0 bottom-0 max-h-[92svh] rounded-t-3xl pt-7 pb-[calc(1.25rem+env(safe-area-inset-bottom))] data-open:slide-in-from-bottom data-open:duration-400 data-closed:slide-out-to-bottom data-closed:duration-250",
+          "before:absolute before:top-2.5 before:left-1/2 before:h-1 before:w-10 before:-translate-x-1/2 before:rounded-full before:bg-foreground/15 sm:before:hidden",
+          "sm:inset-x-auto sm:top-1/2 sm:bottom-auto sm:left-1/2 sm:max-w-sm sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-2xl sm:pt-5 sm:pb-5 sm:data-open:fade-in-0 sm:data-open:zoom-in-95 sm:data-open:slide-in-from-bottom-3 sm:data-open:duration-300 sm:data-closed:fade-out-0 sm:data-closed:zoom-out-95 sm:data-closed:slide-out-to-bottom-2 sm:data-closed:duration-150",
           className
         )}
         {...props}
