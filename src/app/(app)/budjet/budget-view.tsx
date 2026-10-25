@@ -10,8 +10,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import type { BudgetOverview, MonthHistory, WalletBalance } from "@/lib/data/budget";
-import { MONTH_NAMES, currentMonthKey } from "@/lib/dates";
+import { MONTH_NAMES, currentMonthKey, formatDateTime } from "@/lib/dates";
 import { WALLET_KIND_LABELS } from "@/lib/domain";
+import { CURRENCIES, formatCurrency, formatRate } from "@/lib/currency";
 import { formatAmount, formatMoney } from "@/lib/money";
 import { cn } from "@/lib/utils";
 import { BalanceForm } from "./balance-dialog";
@@ -29,7 +30,12 @@ export function BudgetView({ data }: { data: BudgetOverview }) {
 function BudgetBody({ data }: { data: BudgetOverview }) {
   const editor = useEntryEditor();
   const [balanceWallet, setBalanceWallet] = useState<WalletBalance | null>(null);
-  const positiveTotal = data.wallets.reduce((sum, w) => sum + Math.max(w.balance, 0), 0);
+  // Ulushlar so'mdagi qiymat bo'yicha (har xil valyutadagi hamyonlarni solishtirish uchun)
+  const positiveTotal = data.wallets.reduce((sum, w) => sum + Math.max(w.balanceUzs, 0), 0);
+  const usedRates = CURRENCIES.filter((c) => c !== "UZS" && data.wallets.some((w) => w.currency === c)).flatMap((c) => {
+    const info = data.rates[c];
+    return info ? [{ currency: c, ...info }] : [];
+  });
 
   const openSalary = () => {
     const month = MONTH_NAMES[Number(currentMonthKey().slice(5)) - 1].toLowerCase();
@@ -52,10 +58,37 @@ function BudgetBody({ data }: { data: BudgetOverview }) {
         </Alert>
       )}
 
+      {data.missingRates.length > 0 && (
+        <Alert variant="destructive">
+          <Info />
+          <AlertDescription>
+            {data.missingRates.join(", ")} kursini olib bo&apos;lmadi — bu hamyonlar jami budjetga qo&apos;shilmadi. Internet
+            ulanishi tiklangach o&apos;zi yangilanadi.
+          </AlertDescription>
+        </Alert>
+      )}
+
       <TotalCard data={data} onSalary={openSalary} onTransfer={() => editor.openNew("otkazma")} />
 
       <section className="space-y-3">
-        <h2 className="font-heading text-xl font-medium">Hamyonlar</h2>
+        <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">
+          <h2 className="font-heading text-xl font-medium">Hamyonlar</h2>
+          {usedRates.length > 0 && (
+            // Hamyonlarda ishlatilgan valyutalar kursi va manbasi
+            <div className="flex flex-wrap gap-1.5">
+              {usedRates.map((r) => (
+                <span
+                  key={r.currency}
+                  title={`${RATE_SOURCES[r.source] ?? r.source} · ${formatDateTime(new Date(r.fetchedAt))}`}
+                  className="inline-flex items-center gap-1.5 rounded-full bg-card px-3 py-1 text-xs ring-1 ring-border"
+                >
+                  <span className="font-medium">{formatRate(r.currency, r.rate)}</span>
+                  <span className="text-muted-foreground">{RATE_SOURCES[r.source] ?? r.source}</span>
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
         <div className="stagger grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {data.wallets.map((wallet) => (
             <WalletCard
@@ -118,8 +151,8 @@ function TotalCard({
   onSalary: () => void;
   onTransfer: () => void;
 }) {
-  const positive = data.wallets.filter((w) => w.balance > 0);
-  const positiveTotal = positive.reduce((sum, w) => sum + w.balance, 0);
+  const positive = data.wallets.filter((w) => w.balanceUzs > 0);
+  const positiveTotal = positive.reduce((sum, w) => sum + w.balanceUzs, 0);
 
   return (
     <Card tone="olive" className="py-6">
@@ -152,9 +185,9 @@ function TotalCard({
               {positive.map((w) => (
                 <div
                   key={w.id}
-                  title={`${w.name}: ${formatMoney(w.balance)}`}
+                  title={`${w.name}: ${formatCurrency(w.balance, w.currency)}`}
                   className="bar-grow h-full first:rounded-l-full last:rounded-r-full"
-                  style={{ width: `${(w.balance / positiveTotal) * 100}%`, backgroundColor: w.color }}
+                  style={{ width: `${(w.balanceUzs / positiveTotal) * 100}%`, backgroundColor: w.color }}
                 />
               ))}
             </div>
@@ -162,7 +195,7 @@ function TotalCard({
               {positive.map((w) => (
                 <span key={w.id} className="flex items-center gap-1.5">
                   <span className="size-2 rounded-full" style={{ backgroundColor: w.color }} />
-                  {w.name} · {Math.round((w.balance / positiveTotal) * 100)}%
+                  {w.name} · {Math.round((w.balanceUzs / positiveTotal) * 100)}%
                 </span>
               ))}
             </div>
@@ -198,7 +231,8 @@ function WalletCard({
   onAdjust: () => void;
 }) {
   // Ulush — musbat qoldiqlar yig'indisiga nisbatan (manfiy hamyon bo'lsa ham 100% dan oshmaydi)
-  const share = positiveTotal > 0 && wallet.balance > 0 ? Math.round((wallet.balance / positiveTotal) * 100) : 0;
+  const share = positiveTotal > 0 && wallet.balanceUzs > 0 ? Math.round((wallet.balanceUzs / positiveTotal) * 100) : 0;
+  const foreign = wallet.currency !== "UZS";
   return (
     <Card>
       <CardContent className="space-y-4">
@@ -210,10 +244,22 @@ function WalletCard({
           </div>
           {share > 0 && <span className="text-xs font-medium text-muted-foreground">{share}%</span>}
         </div>
-        <Money amount={wallet.balance} className={cn("block truncate text-[1.75rem]", wallet.balance < 0 && "text-expense")} />
-        <div className="flex gap-3 text-xs">
-          <span className="text-income">+{formatMoney(wallet.monthIn)}</span>
-          <span className="text-expense">−{formatMoney(wallet.monthOut)}</span>
+        <div className="space-y-1">
+          <Money
+            amount={wallet.balance}
+            currency={wallet.currency}
+            className={cn("block truncate text-[1.75rem]", wallet.balance < 0 && "text-expense")}
+          />
+          {/* Chet valyuta — bugungi kurs bilan so'mda */}
+          {foreign && (
+            <p className="text-xs text-muted-foreground">
+              {wallet.rate ? `≈ ${formatMoney(wallet.balanceUzs)}` : "Kurs hali olinmagan"}
+            </p>
+          )}
+        </div>
+        <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs">
+          <span className="text-income">+{formatCurrency(wallet.monthIn, wallet.currency)}</span>
+          <span className="text-expense">−{formatCurrency(wallet.monthOut, wallet.currency)}</span>
           <span className="text-muted-foreground">bu oy</span>
         </div>
         <Button variant="outline" size="sm" className="w-full" onClick={onAdjust}>
@@ -254,3 +300,5 @@ function HistoryCard({ history, className }: { history: MonthHistory[]; classNam
     </Card>
   );
 }
+
+const RATE_SOURCES: Record<string, string> = { cbu: "Markaziy bank", coingecko: "CoinGecko", binance: "Binance" };

@@ -3,6 +3,7 @@
 import { createElement } from "react";
 import { ArrowLeftRight, ArrowRight, HandCoins } from "lucide-react";
 import { SourceBadge } from "@/components/entries/source-badge";
+import { formatCurrency } from "@/lib/currency";
 import { formatDateTime, formatTime } from "@/lib/dates";
 import type { Entry } from "@/lib/entries";
 import { getIcon } from "@/lib/icons";
@@ -52,14 +53,31 @@ export function EntryRow({
     </span>
   );
 
+  // Chet valyutali yozuv: asosiy summa o'z valyutasida, ostida taxminiy so'm (hisobotlar so'mda)
+  const foreign = isTx && entry.currency !== "UZS" && entry.originalAmount !== null;
+  const crossTransfer = !isTx && entry.fromWallet.currency !== entry.toWallet.currency;
+  const signed = (value: number) => (isTx && entry.type === "chiqim" ? -value : value);
+
   const amount = (
     <span
       className={cn(
-        "shrink-0 text-right font-semibold tabular-nums",
+        "flex shrink-0 flex-col items-end text-right font-semibold tabular-nums",
         !isTx ? "text-muted-foreground" : entry.type === "kirim" ? "text-income" : "text-expense",
       )}
     >
-      {isTx ? formatMoney(entry.type === "kirim" ? entry.amount : -entry.amount, { sign: true }) : formatMoney(entry.amount)}
+      <span>
+        {isTx
+          ? formatCurrency(signed(foreign ? entry.originalAmount! : entry.amount), foreign ? entry.currency : "UZS", { sign: true })
+          : formatCurrency(entry.amount, entry.fromWallet.currency)}
+      </span>
+      {foreign && (
+        <span className="text-[11px] font-normal text-muted-foreground">≈ {formatMoney(entry.amount)}</span>
+      )}
+      {crossTransfer && (
+        <span className="text-[11px] font-normal text-muted-foreground">
+          → {formatCurrency(entry.toAmount, entry.toWallet.currency)}
+        </span>
+      )}
     </span>
   );
 

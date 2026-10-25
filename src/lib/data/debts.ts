@@ -89,7 +89,8 @@ export async function getDebtsPage(direction: DebtDirection) {
     .sort((a, b) => Number(b.overdue) - Number(a.overdue) || (a.daysToDue ?? 1e9) - (b.daysToDue ?? 1e9));
   const closed = items.filter((i) => i.closed).sort((a, b) => (b.closedAt ?? "").localeCompare(a.closedAt ?? ""));
 
-  return { items: [...open, ...closed], wallets: options.wallets };
+  // Qarz va kreditlar so'mda yuritiladi — faqat so'mli hamyonlar
+  return { items: [...open, ...closed], wallets: options.wallets.filter((w) => w.currency === "UZS") };
 }
 
 const UPCOMING_DAYS = 30;

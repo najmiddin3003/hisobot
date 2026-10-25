@@ -18,7 +18,7 @@ export function defineModel<TSchema extends Schema>(name: string, schema: TSchem
   return createModel(name, schema);
 }
 
-/** Summalar so'mda, butun son sifatida saqlanadi */
+/** Summalar butun son sifatida saqlanadi (so'm yoki valyutaning eng kichik birligi) */
 export const moneyField = {
   type: Number,
   required: true,

@@ -3,8 +3,10 @@ import type { Types } from "mongoose";
 import { AI_MODEL, aiConfigured } from "@/lib/ai/client";
 import { requireUser } from "@/lib/auth/dal";
 import { balanceOf, sumsByWallet } from "@/lib/balances";
+import { currencyOf, minorToUzs } from "@/lib/currency";
 import { connectDB } from "@/lib/db";
 import { AiChat, AiInsight, Category, Recurring, Transaction, Transfer, User, Wallet } from "@/lib/models";
+import { getRates } from "@/lib/rates";
 
 export type SettingsOverview = Awaited<ReturnType<typeof getSettingsOverview>>;
 export type CategoryItem = SettingsOverview["categories"][number];
@@ -30,7 +32,7 @@ export async function getSettingsOverview() {
   await requireUser();
   await connectDB();
 
-  const [wallets, categories, userCount, sums, byCategory, byWallet, transfersFrom, transfersTo, recurring, chats, insights] =
+  const [wallets, categories, userCount, sums, byCategory, byWallet, transfersFrom, transfersTo, recurring, chats, insights, { rates }] =
     await Promise.all([
       Wallet.find().sort({ order: 1, createdAt: 1 }).lean(),
       Category.find().sort({ order: 1, createdAt: 1 }).lean(),
@@ -43,6 +45,7 @@ export async function getSettingsOverview() {
       Recurring.find({}, { categoryId: 1, walletId: 1, active: 1, type: 1, amount: 1 }).lean(),
       AiChat.countDocuments(),
       AiInsight.countDocuments(),
+      getRates(),
     ]);
 
   const usage = (rows: UsageRow[][], id: Types.ObjectId) =>
@@ -58,15 +61,20 @@ export async function getSettingsOverview() {
     wallets: wallets.map((w) => {
       const used = usage([byWallet, transfersFrom, transfersTo], w._id);
       const linked = recurringFor("walletId", w._id);
+      const currency = currencyOf(w);
+      const balance = balanceOf(w.initialBalance, sums.get(w._id));
       return {
         id: String(w._id),
         name: w.name,
         kind: w.kind,
+        currency,
         icon: w.icon,
         color: w.color,
         archived: w.archived,
         initialBalance: w.initialBalance,
-        balance: balanceOf(w.initialBalance, sums.get(w._id)),
+        /** O'z valyutasida (eng kichik birlikda) va bugungi kurs bilan so'mda */
+        balance,
+        balanceUzs: minorToUzs(balance, currency, rates[currency]),
         entries: used.active,
         /** Savatchadagi yozuvlar, takroriy to'lov yoki boshlang'ich qoldiq bo'lsa — butunlay o'chirib bo'lmaydi */
         deletable: used.total === 0 && linked.length === 0 && w.initialBalance === 0,
@@ -95,7 +103,13 @@ export async function getSettingsOverview() {
       bot: { configured: Boolean(process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_ALLOWED_USER_ID) },
       recurring: {
         active: activeRecurring.length,
-        monthlyExpense: activeRecurring.filter((r) => r.type === "chiqim").reduce((s, r) => s + r.amount, 0),
+        // Summalar hamyon valyutasida — so'mga bugungi kurs bilan
+        monthlyExpense: activeRecurring
+          .filter((r) => r.type === "chiqim")
+          .reduce((s, r) => {
+            const currency = currencyOf(wallets.find((w) => w._id.equals(r.walletId)));
+            return s + minorToUzs(r.amount, currency, rates[currency]);
+          }, 0),
       },
     },
   };

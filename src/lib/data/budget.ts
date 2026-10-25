@@ -1,11 +1,13 @@
 import "server-only";
 import { requireUser } from "@/lib/auth/dal";
 import { balanceOf, sumsByWallet, totalBalance } from "@/lib/balances";
+import { currencyOf, minorToUzs } from "@/lib/currency";
 import { connectDB } from "@/lib/db";
 import { currentMonthKey, monthLabel, monthRange, shiftMonth } from "@/lib/dates";
 import { loadEntryOptions } from "@/lib/data/entries";
 import { Category, Transaction, Wallet } from "@/lib/models";
 import { percentChange } from "@/lib/money";
+import { getRates } from "@/lib/rates";
 import { generateDueRecurring } from "@/lib/recurring";
 
 const HISTORY_MONTHS = 12;
@@ -35,7 +37,7 @@ export async function getBudgetOverview() {
   const current = currentMonthKey();
   const { start: monthStart } = monthRange(current);
 
-  const [wallets, allSums, monthSums, byMonth, salary, options] = await Promise.all([
+  const [wallets, allSums, monthSums, byMonth, salary, options, ratesSnapshot] = await Promise.all([
     Wallet.find().sort({ order: 1, createdAt: 1 }).lean(),
     sumsByWallet(),
     sumsByWallet(monthStart),
@@ -53,25 +55,32 @@ export async function getBudgetOverview() {
     ]),
     Category.findOne({ systemKey: "oylik" }, { _id: 1 }).lean(),
     loadEntryOptions(),
+    getRates(),
   ]);
+  const { rates } = ratesSnapshot;
 
+  // Hamyon summalari o'z valyutasida (eng kichik birlikda), balanceUzs — bugungi kurs bilan so'mda
   const walletRows = wallets.map((w) => {
     const sums = monthSums.get(w._id);
+    const currency = currencyOf(w);
+    const balance = balanceOf(w.initialBalance, allSums.get(w._id));
     return {
       id: String(w._id),
       name: w.name,
       kind: w.kind,
+      currency,
       icon: w.icon,
       color: w.color,
       archived: w.archived,
       initialBalance: w.initialBalance,
-      balance: balanceOf(w.initialBalance, allSums.get(w._id)),
+      balance,
+      balanceUzs: minorToUzs(balance, currency, rates[currency]),
+      rate: currency === "UZS" ? null : rates[currency] || null,
       monthIn: sums.kirim + sums.transferIn,
       monthOut: sums.chiqim + sums.transferOut,
     };
   });
-  const total = walletRows.reduce((sum, w) => sum + w.balance, 0);
-  const initialTotal = wallets.reduce((sum, w) => sum + w.initialBalance, 0);
+  const total = walletRows.reduce((sum, w) => sum + w.balanceUzs, 0);
 
   // Oylar bo'yicha kirim/chiqim; o'tkazmalar jami pulni o'zgartirmaydi
   const flows = new Map<string, { income: number; expense: number }>();
@@ -85,20 +94,15 @@ export async function getBudgetOverview() {
   const dataMonths = [...flows.keys()].filter((m) => m <= current).sort();
   const firstShown = [dataMonths[0] ?? current, shiftMonth(current, -(HISTORY_MONTHS - 1))].sort().at(-1)!;
 
-  // Ko'rsatiladigan birinchi oy boshidagi qoldiq = boshlang'ich qoldiqlar + undan oldingi barcha oylar natijasi
-  let running = initialTotal;
-  for (const m of dataMonths) {
-    if (m >= firstShown) break;
-    const f = flows.get(m)!;
-    running += f.income - f.expense;
-  }
-
-  const history = [];
-  for (let m = firstShown; m <= current; m = shiftMonth(m, 1)) {
+  // Hozirgi jamidan orqaga: oy boshidagi qoldiq = oy oxiridagi − oy natijasi. Chet valyutadagi pul bugungi
+  // kurs bilan hisoblanadi, shuning uchun oxirgi nuqta haqiqiy jami bilan doim teng
+  const history: { month: string; label: string; start: number; income: number; expense: number; end: number; change: number | null }[] = [];
+  let running = total;
+  for (let m = current; m >= firstShown; m = shiftMonth(m, -1)) {
     const f = flows.get(m) ?? { income: 0, expense: 0 };
-    const start = running;
-    const end = start + f.income - f.expense;
-    history.push({
+    const end = running;
+    const start = end - (f.income - f.expense);
+    history.unshift({
       month: m,
       label: monthLabel(m),
       start,
@@ -107,7 +111,7 @@ export async function getBudgetOverview() {
       end,
       change: growthPercent(start, end),
     });
-    running = end;
+    running = start;
   }
 
   const thisMonth = history.at(-1)!;
@@ -123,5 +127,8 @@ export async function getBudgetOverview() {
     needsInitialBalances: wallets.every((w) => w.initialBalance === 0),
     salaryCategoryId: salary ? String(salary._id) : null,
     options,
+    /** Hamyonlarda ishlatilgan chet valyutalar kurslari */
+    rates: ratesSnapshot.info,
+    missingRates: ratesSnapshot.missing.filter((c) => walletRows.some((w) => w.currency === c && !w.archived)),
   };
 }

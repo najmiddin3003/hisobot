@@ -18,7 +18,9 @@ import { paidByPayments } from "@/lib/debts-sync";
 import type { DebtDirection, RevokeReason } from "@/lib/domain";
 import { BotState, Category, Debt, Transaction, User, Wallet } from "@/lib/models";
 import { formatDateTime, monthRange, currentMonthKey } from "@/lib/dates";
+import { CURRENCY_META, currencyOf, type Currency } from "@/lib/currency";
 import { formatMoney } from "@/lib/money";
+import { rateFor, transactionAmounts } from "@/lib/rates";
 import { esc, guessCategory, parseNameAndAmount, parseQuickEntry } from "./parse";
 import { buildReport, type ReportPeriod } from "./report";
 import { endBotSession, readBotSession, startBotSession } from "./session";
@@ -73,16 +75,20 @@ async function loadOptions() {
     Category.find({ archived: false }).sort({ order: 1, createdAt: 1 }).lean(),
     Wallet.find({ archived: false }).sort({ order: 1, createdAt: 1 }).lean(),
   ]);
-  return { categories, wallets };
+  // Qarz va kreditlar faqat so'mda — ular uchun so'mli hamyonlar
+  return { categories, wallets, uzsWallets: wallets.filter((w) => currencyOf(w) === "UZS") };
 }
 type Options = Awaited<ReturnType<typeof loadOptions>>;
+
+/** Shu valyutadagi hamyonlar ($20 — dollar hamyonlari, 45000 — so'mli) */
+const walletsFor = (options: Options, currency: Currency) => options.wallets.filter((w) => currencyOf(w) === currency);
 
 /** Qo'lda tanlanadigan kategoriyalar (qarz/kredit tizim kategoriyalarisiz) */
 const selectable = (options: Options, type: "kirim" | "chiqim") =>
   options.categories.filter((c) => c.type === type && (!c.systemKey || c.systemKey === "oylik"));
 
-const defaultWalletId = (options: Options, last: string | null) =>
-  options.wallets.find((w) => w._id.equals(last ?? ""))?._id.toString() ?? options.wallets[0]?._id.toString() ?? null;
+const defaultWalletId = (wallets: Options["wallets"], last: string | null) =>
+  wallets.find((w) => w._id.equals(last ?? ""))?._id.toString() ?? wallets[0]?._id.toString() ?? null;
 
 function revokedText(reason: RevokeReason | null) {
   switch (reason) {
@@ -185,6 +191,7 @@ async function handleLogin(ctx: Context, state: State, text: string, sessionNote
       "",
       "Tez yozish: <code>45000 taksi</code> — chiqim",
       "Kirim: <code>+12000000 oylik</code>",
+      "Valyutali hamyonga: <code>20$ taksi</code>, <code>15 eur</code>, <code>0.001 btc</code>",
       "Yoki pastdagi tugmalardan foydalaning.",
     ].join("\n"),
     { ...HTML, reply_markup: mainMenu() },
@@ -210,14 +217,24 @@ async function handleEntryInput(ctx: Context, state: State, fallbackType: "kirim
     return;
   }
   const options = await loadOptions();
+  const wallets = walletsFor(options, parsed.currency);
+  if (wallets.length === 0) {
+    await ctx.reply(
+      `Sizda ${CURRENCY_META[parsed.currency].symbol} hamyon yo'q 🤔
+Saytda Sozlamalar → Hamyonlar bo'limida shu valyutada hamyon qo'shing.`,
+      HTML,
+    );
+    return;
+  }
   const type = parsed.type ?? fallbackType;
   const categories = selectable(options, type);
   const draft: EntryDraft = {
     type,
     amount: parsed.amount,
+    currency: parsed.currency,
     note: parsed.note,
     categoryId: guessCategory(parsed.note, categories)?._id.toString() ?? null,
-    walletId: defaultWalletId(options, state.lastWalletId),
+    walletId: defaultWalletId(wallets, state.lastWalletId),
     occurredAt: new Date().toISOString(),
   };
 
@@ -257,7 +274,7 @@ async function handleEntryCallback(ctx: Context, state: State, action: string, v
   if (action === "wals") {
     await ctx.editMessageText(`${render()}\n\n👇 Hamyonni tanlang:`, {
       ...HTML,
-      reply_markup: pickerKeyboard(options.wallets, "e:wal", "e:back"),
+      reply_markup: pickerKeyboard(walletsFor(options, draft.currency ?? "UZS"), "e:wal", "e:back"),
     });
     return;
   }
@@ -268,14 +285,21 @@ async function handleEntryCallback(ctx: Context, state: State, action: string, v
   }
   if (action === "save") {
     const category = selectable(options, draft.type).find((c) => c._id.equals(draft.categoryId ?? ""));
-    const wallet = options.wallets.find((w) => w._id.equals(draft.walletId ?? ""));
+    const currency = draft.currency ?? "UZS";
+    const wallet = walletsFor(options, currency).find((w) => w._id.equals(draft.walletId ?? ""));
     if (!category || !wallet) {
       await ctx.answerCallbackQuery({ text: "Kategoriya va hamyonni tanlang" });
       return;
     }
+    // Chet valyutada — so'mdagi qiymati bugungi kurs bilan yoziladi
+    const rate = await rateFor(currency);
+    if (!rate.ok) {
+      await ctx.answerCallbackQuery({ text: rate.error, show_alert: true });
+      return;
+    }
     await Transaction.create({
       type: draft.type,
-      amount: draft.amount,
+      ...transactionAmounts(draft.amount, currency, rate.rate),
       categoryId: category._id,
       walletId: wallet._id,
       note: draft.note,
@@ -326,7 +350,7 @@ function renderDebtDraft(draft: DebtNewDraft, options: Options) {
 async function handleNewDebtInput(ctx: Context, state: State, text: string) {
   const parsed = parseNameAndAmount(text);
   if (!parsed) {
-    await ctx.reply("Ism va summani yozing, masalan: <code>Akmal 500000</code>", HTML);
+    await ctx.reply("Ism va summani so'mda yozing (qarzlar so'mda yuritiladi), masalan: <code>Akmal 500000</code>", HTML);
     return;
   }
   const options = await loadOptions();
@@ -334,7 +358,7 @@ async function handleNewDebtInput(ctx: Context, state: State, text: string) {
     direction: state.data.direction as DebtDirection,
     counterparty: parsed.name,
     amount: parsed.amount,
-    walletId: defaultWalletId(options, state.lastWalletId),
+    walletId: defaultWalletId(options.uzsWallets, state.lastWalletId),
     occurredAt: new Date().toISOString(),
   };
   await ctx.reply(renderDebtDraft(draft, options), { ...HTML, reply_markup: confirmKeyboard("d") });
@@ -392,7 +416,7 @@ async function showPaymentDraft(ctx: Context, state: State, amount: number, edit
   const draft: DebtPayDraft = {
     debtId,
     amount,
-    walletId: defaultWalletId(options, state.lastWalletId),
+    walletId: defaultWalletId(options.uzsWallets, state.lastWalletId),
     occurredAt: new Date().toISOString(),
   };
   const text = renderPaymentDraft(debt, draft, options);
@@ -460,7 +484,7 @@ async function handleDebtCallback(ctx: Context, state: State, action: string, va
   if (action === "wals") {
     await ctx.editMessageText(`${render()}\n\n👇 Hamyonni tanlang:`, {
       ...HTML,
-      reply_markup: pickerKeyboard(options.wallets, "d:wal", "d:back"),
+      reply_markup: pickerKeyboard(options.uzsWallets, "d:wal", "d:back"),
     });
     return;
   }
@@ -586,7 +610,8 @@ async function onText(ctx: Context) {
   }
   if (state.step === "debt_pay_amount") {
     const parsed = parseQuickEntry(text);
-    if (!parsed) {
+    // Qarzlar so'mda yuritiladi
+    if (!parsed || parsed.currency !== "UZS") {
       await ctx.reply("Summani raqam bilan yozing, masalan: <code>500000</code>", HTML);
       return;
     }

@@ -1,21 +1,25 @@
 import "server-only";
 import type { Types } from "mongoose";
 import { requireUser } from "@/lib/auth/dal";
+import { currencyOf, minorToUzs, type Currency, type Rates } from "@/lib/currency";
 import { connectDB } from "@/lib/db";
 import { monthRange, resolveMonthParam } from "@/lib/dates";
 import type { Entry, EntryFilters, EntryOptions, TransferEntry, TxEntry } from "@/lib/entries";
 import { Category, Recurring, Transaction, Transfer, Wallet, type CategoryDoc, type WalletDoc } from "@/lib/models";
+import { getRates } from "@/lib/rates";
 import { generateDueRecurring, nextRecurringDate } from "@/lib/recurring";
 
 type WithId<T> = T & { _id: Types.ObjectId };
 type Brief = { name: string; icon: string; color: string };
 
 const MISSING: Brief = { name: "O'chirilgan", icon: "Ellipsis", color: "#64748b" };
+const MISSING_WALLET = { ...MISSING, currency: "UZS" as Currency };
 
 async function loadLookups() {
-  const [categories, wallets] = await Promise.all([
+  const [categories, wallets, { rates }] = await Promise.all([
     Category.find().sort({ order: 1, createdAt: 1 }).lean(),
     Wallet.find().sort({ order: 1, createdAt: 1 }).lean(),
+    getRates(),
   ]);
   const brief = (doc: { name: string; icon: string; color: string }): Brief => ({
     name: doc.name,
@@ -25,13 +29,14 @@ async function loadLookups() {
   return {
     categories,
     wallets,
+    rates,
     category: (id: unknown) => {
       const doc = categories.find((c) => c._id.equals(String(id)));
       return doc ? brief(doc) : MISSING;
     },
     wallet: (id: unknown) => {
       const doc = wallets.find((w) => w._id.equals(String(id)));
-      return doc ? brief(doc) : MISSING;
+      return doc ? { ...brief(doc), currency: currencyOf(doc) } : MISSING_WALLET;
     },
   };
 }
@@ -41,21 +46,30 @@ type Lookups = Awaited<ReturnType<typeof loadLookups>>;
 function selectableOptions(
   categories: WithId<CategoryDoc>[],
   wallets: WithId<WalletDoc>[],
+  rates: Rates,
 ): EntryOptions {
+  const active = wallets.filter((w) => !w.archived);
+  const used = [...new Set(active.map(currencyOf))].filter((c) => c !== "UZS");
   return {
+    rates: Object.fromEntries(used.map((c) => [c, rates[c]])),
     categories: categories
       .filter((c) => !c.archived && (!c.systemKey || c.systemKey === "oylik"))
       .map((c) => ({ id: String(c._id), name: c.name, type: c.type, icon: c.icon, color: c.color })),
-    wallets: wallets
-      .filter((w) => !w.archived)
-      .map((w) => ({ id: String(w._id), name: w.name, kind: w.kind, icon: w.icon, color: w.color })),
+    wallets: active.map((w) => ({
+      id: String(w._id),
+      name: w.name,
+      kind: w.kind,
+      icon: w.icon,
+      color: w.color,
+      currency: currencyOf(w),
+    })),
   };
 }
 
 /** Yozuv oynasi uchun kategoriya va hamyonlar (seans chaqiruvchi tomonda tekshirilgan bo'lishi kerak) */
 export async function loadEntryOptions() {
-  const { categories, wallets } = await loadLookups();
-  return selectableOptions(categories, wallets);
+  const { categories, wallets, rates } = await loadLookups();
+  return selectableOptions(categories, wallets, rates);
 }
 
 type TxLean = Awaited<ReturnType<typeof findTransactions>>[number];
@@ -83,6 +97,9 @@ function toTxEntry(doc: TxLean, lookups: Lookups): TxEntry {
     wallet: lookups.wallet(doc.walletId),
     debtId: doc.debtId ? String(doc.debtId) : null,
     recurringId: doc.recurringId ? String(doc.recurringId) : null,
+    currency: currencyOf(doc),
+    originalAmount: doc.originalAmount ?? null,
+    rate: doc.rate ?? null,
   };
 }
 
@@ -100,6 +117,7 @@ function toTransferEntry(doc: TransferLean, lookups: Lookups): TransferEntry {
     fromWallet: lookups.wallet(doc.fromWalletId),
     toWalletId: String(doc.toWalletId),
     toWallet: lookups.wallet(doc.toWalletId),
+    toAmount: doc.toAmount ?? doc.amount,
   };
 }
 
@@ -165,7 +183,7 @@ export async function getEntriesPage(monthParam: unknown, filters: EntryFilters)
     ...transfers.map((t) => toTransferEntry(t, lookups)),
   ].sort(byOccurredDesc);
 
-  return { entries, totals, options: selectableOptions(lookups.categories, lookups.wallets) };
+  return { entries, totals, options: selectableOptions(lookups.categories, lookups.wallets, lookups.rates) };
 }
 
 /** Dashboard uchun oxirgi yozuvlar (va tezkor qo'shish oynasi uchun ro'yxatlar) */
@@ -178,10 +196,13 @@ export async function getRecentEntries(limit = 6) {
     findTransactions({ deletedAt: null }, limit, { occurredAt: -1 }),
     findTransfers({ deletedAt: null }, limit, { occurredAt: -1 }),
   ]);
-  const entries = [...transactions.map((t) => toTxEntry(t, lookups)), ...transfers.map((t) => toTransferEntry(t, lookups))]
+  const entries = [
+    ...transactions.map((t) => toTxEntry(t, lookups)),
+    ...transfers.map((t) => toTransferEntry(t, lookups)),
+  ]
     .sort(byOccurredDesc)
     .slice(0, limit);
-  return { entries, options: selectableOptions(lookups.categories, lookups.wallets) };
+  return { entries, options: selectableOptions(lookups.categories, lookups.wallets, lookups.rates) };
 }
 
 /** Oyning eng katta chiqimlari (seans chaqiruvchi tomonda tekshirilgan bo'lishi kerak) */
@@ -217,23 +238,31 @@ export async function getRecurringPage() {
   await requireUser();
   await connectDB();
   await generateDueRecurring();
-  const lookups = await loadLookups();
-  const items = await Recurring.find().sort({ active: -1, dayOfMonth: 1, createdAt: 1 }).lean();
+  const [lookups, items] = await Promise.all([
+    loadLookups(),
+    Recurring.find().sort({ active: -1, dayOfMonth: 1, createdAt: 1 }).lean(),
+  ]);
+  const { rates } = lookups;
   return {
-    options: selectableOptions(lookups.categories, lookups.wallets),
-    items: items.map((r) => ({
-      id: String(r._id),
-      name: r.name,
-      type: r.type,
-      amount: r.amount,
-      categoryId: String(r.categoryId),
-      category: lookups.category(r.categoryId),
-      walletId: String(r.walletId),
-      wallet: lookups.wallet(r.walletId),
-      dayOfMonth: r.dayOfMonth,
-      note: r.note,
-      active: r.active,
-      nextDate: r.active ? nextRecurringDate(r).toISOString() : null,
-    })),
+    options: selectableOptions(lookups.categories, lookups.wallets, lookups.rates),
+    items: items.map((r) => {
+      const wallet = lookups.wallet(r.walletId);
+      return {
+        id: String(r._id),
+        name: r.name,
+        type: r.type,
+        /** Hamyon valyutasida (eng kichik birlikda); amountUzs — bugungi kurs bilan */
+        amount: r.amount,
+        amountUzs: minorToUzs(r.amount, wallet.currency, rates[wallet.currency]),
+        categoryId: String(r.categoryId),
+        category: lookups.category(r.categoryId),
+        walletId: String(r.walletId),
+        wallet,
+        dayOfMonth: r.dayOfMonth,
+        note: r.note,
+        active: r.active,
+        nextDate: r.active ? nextRecurringDate(r).toISOString() : null,
+      };
+    }),
   };
 }

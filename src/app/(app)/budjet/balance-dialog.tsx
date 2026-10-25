@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import type { WalletBalance } from "@/lib/data/budget";
-import { formatMoney } from "@/lib/money";
+import { formatCurrency } from "@/lib/currency";
 import { cn } from "@/lib/utils";
 import { setWalletBalance } from "./actions";
 
@@ -51,15 +51,15 @@ export function BalanceForm({ wallet, onDone }: { wallet: WalletBalance; onDone:
       )}
 
       <div className="rounded-lg bg-muted/50 px-3 py-2 text-sm">
-        Tizim bo&apos;yicha hozir: <b className="tabular-nums">{formatMoney(wallet.balance)}</b>
+        Tizim bo&apos;yicha hozir: <b className="tabular-nums">{formatCurrency(wallet.balance, wallet.currency)}</b>
       </div>
 
       <div className="space-y-2">
         <Label htmlFor="actual-balance">Haqiqiy qoldiq</Label>
-        <AmountInput id="actual-balance" value={actual} onChange={setActual} autoFocus />
+        <AmountInput id="actual-balance" value={actual} onChange={setActual} currency={wallet.currency} autoFocus />
         {diff !== 0 && (
           <p className={cn("text-xs font-medium", diff > 0 ? "text-income" : "text-expense")}>
-            Farq: {formatMoney(diff, { sign: true })}
+            Farq: {formatCurrency(diff, wallet.currency, { sign: true })}
           </p>
         )}
       </div>

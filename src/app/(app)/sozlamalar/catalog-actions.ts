@@ -6,6 +6,7 @@ import { z } from "zod";
 import type { ActionResult } from "@/app/(app)/kirim-chiqim/actions";
 import { requireActionSession } from "@/lib/auth/guard";
 import { balanceOf, sumsByWallet } from "@/lib/balances";
+import { CURRENCIES } from "@/lib/currency";
 import { connectDB } from "@/lib/db";
 import { TX_TYPES, WALLET_KINDS, type TxType } from "@/lib/domain";
 import { isIconName } from "@/lib/icons";
@@ -182,9 +183,11 @@ const walletSchema = z.object({
   id: objectId.optional(),
   name,
   kind: z.enum(WALLET_KINDS),
+  /** Faqat yangi hamyonda tanlanadi — keyin o'zgarmaydi (eski yozuvlar shu valyutada) */
+  currency: z.enum(CURRENCIES).default("UZS"),
   icon,
   color,
-  /** Faqat yangi hamyonda: undagi hozirgi pul */
+  /** Faqat yangi hamyonda: undagi hozirgi pul (tanlangan valyutaning eng kichik birligida) */
   initialBalance: z
     .number()
     .int("Summa butun son bo'lishi kerak")
@@ -213,6 +216,7 @@ export async function saveWallet(input: unknown): Promise<ActionResult> {
     await Wallet.create({
       name: data.name,
       kind: data.kind,
+      currency: data.currency,
       icon: data.icon,
       color: data.color,
       initialBalance: data.initialBalance ?? 0,

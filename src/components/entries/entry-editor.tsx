@@ -20,6 +20,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { DateTimePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { formatCurrency, formatRate, fromMinor, minorToUzs, toMinor, type Currency } from "@/lib/currency";
 import { formatDateTime, toDateTimeInput } from "@/lib/dates";
 import type { Entry, EntryOptions } from "@/lib/entries";
 import { cn } from "@/lib/utils";
@@ -134,13 +135,17 @@ function EntryForm({ payload, options, onDone }: { payload: Payload; options: En
   const [kind, setKind] = useState<EntryKind>(
     payload.mode === "new" ? payload.kind : transfer ? "otkazma" : (tx?.type ?? "chiqim"),
   );
-  const [amount, setAmount] = useState(editing?.amount ?? 0);
+  // Summa hamyon valyutasida (eng kichik birlikda): chet valyutali yozuvda asl summa, so'mlida — so'm
+  const [amount, setAmount] = useState(tx ? (tx.originalAmount ?? tx.amount) : (editing?.amount ?? 0));
   const [categoryId, setCategoryId] = useState(tx?.categoryId ?? preset?.categoryId ?? "");
   const [walletId, setWalletId] = useState(tx?.walletId ?? (payload.mode === "new" ? payload.walletId : ""));
   const [fromWalletId, setFromWalletId] = useState(
     transfer?.fromWalletId ?? (payload.mode === "new" ? payload.walletId : ""),
   );
   const [toWalletId, setToWalletId] = useState(transfer?.toWalletId ?? "");
+  // Har xil valyutali o'tkazmada tushgan summa: qo'lda o'zgartirilmaguncha kurs bo'yicha hisoblanadi
+  const [toAmount, setToAmount] = useState(transfer?.toAmount ?? 0);
+  const [toTouched, setToTouched] = useState(Boolean(transfer));
   const [occurredAt, setOccurredAt] = useState(
     editing ? toDateTimeInput(new Date(editing.occurredAt)) : payload.mode === "new" ? payload.now : "",
   );
@@ -181,7 +186,26 @@ function EntryForm({ payload, options, onDone }: { payload: Payload; options: En
   const categories = options.categories.filter((c) => c.type === kind);
   const kinds: EntryKind[] = transfer ? ["otkazma"] : tx ? ["chiqim", "kirim"] : ["chiqim", "kirim", "otkazma"];
 
+  const currencyOfWallet = (id: string): Currency => options.wallets.find((w) => w.id === id)?.currency ?? "UZS";
+  const rateOf = (c: Currency) => (c === "UZS" ? 1 : (options.rates[c] ?? 0));
+  const amountCurrency = currencyOfWallet(kind === "otkazma" ? fromWalletId : walletId);
+  const toCurrency = currencyOfWallet(toWalletId);
+  const crossCurrency = kind === "otkazma" && Boolean(toWalletId) && amountCurrency !== toCurrency;
+  const autoToAmount =
+    crossCurrency && rateOf(amountCurrency) && rateOf(toCurrency)
+      ? toMinor((fromMinor(amount, amountCurrency) * rateOf(amountCurrency)) / rateOf(toCurrency), toCurrency)
+      : 0;
+  const shownToAmount = toTouched ? toAmount : autoToAmount;
+  // Tahrirda valyuta o'zgarmagan bo'lsa — yozuvning o'z kursi, aks holda bugungi
+  const txRate = tx?.rate && tx.currency === amountCurrency ? tx.rate : rateOf(amountCurrency);
+
+  /** Hamyon valyutasi o'zgarsa yozilgan raqam saqlanadi, faqat birligi almashadi (50 000 so'm → 50 000 $) */
+  const switchCurrency = (next: Currency) => {
+    if (next !== amountCurrency) setAmount((a) => toMinor(fromMinor(a, amountCurrency), next));
+  };
+
   const changeKind = (next: EntryKind) => {
+    switchCurrency(currencyOfWallet(next === "otkazma" ? fromWalletId : walletId));
     setKind(next);
     setError(null);
     if (!options.categories.some((c) => c.id === categoryId && c.type === next)) setCategoryId("");
@@ -191,7 +215,7 @@ function EntryForm({ payload, options, onDone }: { payload: Payload; options: En
     amount > 0 &&
     Boolean(occurredAt) &&
     (kind === "otkazma"
-      ? Boolean(fromWalletId && toWalletId && fromWalletId !== toWalletId)
+      ? Boolean(fromWalletId && toWalletId && fromWalletId !== toWalletId) && (!crossCurrency || shownToAmount > 0)
       : Boolean(categoryId && walletId));
 
   const submit = (event: React.FormEvent) => {
@@ -201,7 +225,15 @@ function EntryForm({ payload, options, onDone }: { payload: Payload; options: En
     startTransition(async () => {
       let result: ActionResult;
       if (kind === "otkazma") {
-        result = await saveTransfer({ id: transfer?.id, fromWalletId, toWalletId, amount, occurredAt, note });
+        result = await saveTransfer({
+          id: transfer?.id,
+          fromWalletId,
+          toWalletId,
+          amount,
+          toAmount: crossCurrency ? shownToAmount : undefined,
+          occurredAt,
+          note,
+        });
       } else {
         result = await saveTransaction({ id: tx?.id, type: kind, amount, categoryId, walletId, occurredAt, note });
       }
@@ -259,22 +291,68 @@ function EntryForm({ payload, options, onDone }: { payload: Payload; options: En
 
       <div className="space-y-2">
         <Label htmlFor="entry-amount">Summa</Label>
-        <AmountInput id="entry-amount" value={amount} onChange={setAmount} autoFocus={!editing} />
+        <AmountInput id="entry-amount" value={amount} onChange={setAmount} currency={amountCurrency} autoFocus={!editing} />
+        {kind !== "otkazma" && amountCurrency !== "UZS" && (
+          <p className="text-xs text-muted-foreground">
+            {txRate > 0 ? (
+              <>
+                ≈ {formatCurrency(minorToUzs(amount, amountCurrency, txRate), "UZS")} · {formatRate(amountCurrency, txRate)}
+              </>
+            ) : (
+              "Kurs hali olinmagan — saqlashda yangilanadi"
+            )}
+          </p>
+        )}
       </div>
 
       {kind === "otkazma" ? (
         <>
           <div className="space-y-2">
             <Label>Qaysi hamyondan</Label>
-            <WalletPicker wallets={options.wallets} value={fromWalletId} onChange={setFromWalletId} disabledId={toWalletId} />
+            <WalletPicker
+              wallets={options.wallets}
+              value={fromWalletId}
+              onChange={(id) => {
+                switchCurrency(currencyOfWallet(id));
+                setFromWalletId(id);
+              }}
+              disabledId={toWalletId}
+            />
           </div>
           <div className="space-y-2">
             <Label>Qaysi hamyonga</Label>
             <WalletPicker wallets={options.wallets} value={toWalletId} onChange={setToWalletId} disabledId={fromWalletId} />
           </div>
-          <p className="text-xs text-muted-foreground">
-            O&apos;tkazma kirim ham, chiqim ham hisoblanmaydi — faqat hamyonlar qoldig&apos;i o&apos;zgaradi.
-          </p>
+          {crossCurrency ? (
+            <div className="space-y-2 rounded-xl border border-dashed p-3">
+              <Label htmlFor="entry-to-amount">Hamyonga tushgan summa</Label>
+              <AmountInput
+                id="entry-to-amount"
+                value={shownToAmount}
+                currency={toCurrency}
+                onChange={(value) => {
+                  setToTouched(true);
+                  setToAmount(value);
+                }}
+              />
+              <p className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+                <span>
+                  {rateOf(amountCurrency) && rateOf(toCurrency)
+                    ? `Bugungi kurs bo'yicha hisoblandi · ${formatRate(amountCurrency === "UZS" ? toCurrency : amountCurrency, rateOf(amountCurrency === "UZS" ? toCurrency : amountCurrency))}`
+                    : "Kurs hali olinmagan — summani qo'lda kiriting"}
+                </span>
+                {toTouched && autoToAmount > 0 && (
+                  <button type="button" className="underline-offset-4 hover:underline" onClick={() => setToTouched(false)}>
+                    Kurs bo&apos;yicha qaytarish
+                  </button>
+                )}
+              </p>
+            </div>
+          ) : (
+            <p className="text-xs text-muted-foreground">
+              O&apos;tkazma kirim ham, chiqim ham hisoblanmaydi — faqat hamyonlar qoldig&apos;i o&apos;zgaradi.
+            </p>
+          )}
         </>
       ) : (
         <>
@@ -284,7 +362,14 @@ function EntryForm({ payload, options, onDone }: { payload: Payload; options: En
           </div>
           <div className="space-y-2">
             <Label>Hamyon</Label>
-            <WalletPicker wallets={options.wallets} value={walletId} onChange={setWalletId} />
+            <WalletPicker
+              wallets={options.wallets}
+              value={walletId}
+              onChange={(id) => {
+                switchCurrency(currencyOfWallet(id));
+                setWalletId(id);
+              }}
+            />
           </div>
         </>
       )}

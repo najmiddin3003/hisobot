@@ -4,10 +4,12 @@ import { isValidObjectId } from "mongoose";
 import { refresh } from "next/cache";
 import { z } from "zod";
 import { requireActionSession } from "@/lib/auth/guard";
+import { currencyOf, fromMinor, toMinor, type Currency } from "@/lib/currency";
 import { fromDateTimeInput } from "@/lib/dates";
 import { connectDB } from "@/lib/db";
 import { TX_TYPES } from "@/lib/domain";
 import { Category, Recurring, Transaction, Transfer, Wallet } from "@/lib/models";
+import { getRates, rateFor, transactionAmounts } from "@/lib/rates";
 import { initialLastGeneratedMonth } from "@/lib/recurring";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
@@ -38,17 +40,24 @@ const occurredAt = z.string().transform((value, ctx) => {
 });
 const entryKind = z.enum(["tx", "transfer"]);
 
-/** Kategoriya qo'lda tanlanadigan va yozuv turiga mos bo'lishi kerak (qarz kategoriyalari emas) */
-async function checkCategoryAndWallet(type: "kirim" | "chiqim", categoryId: string, walletId: string) {
+/**
+ * Kategoriya qo'lda tanlanadigan va yozuv turiga mos bo'lishi kerak (qarz kategoriyalari emas).
+ * To'g'ri bo'lsa — hamyon valyutasi.
+ */
+async function checkCategoryAndWallet(
+  type: "kirim" | "chiqim",
+  categoryId: string,
+  walletId: string,
+): Promise<{ error: string } | { currency: Currency }> {
   const [category, wallet] = await Promise.all([
     Category.findById(categoryId).lean(),
     Wallet.findById(walletId).lean(),
   ]);
   if (!category || category.archived || category.type !== type || (category.systemKey && category.systemKey !== "oylik")) {
-    return "Kategoriyani tanlang";
+    return { error: "Kategoriyani tanlang" };
   }
-  if (!wallet || wallet.archived) return "Hamyonni tanlang";
-  return null;
+  if (!wallet || wallet.archived) return { error: "Hamyonni tanlang" };
+  return { currency: currencyOf(wallet) };
 }
 
 // ---- Kirim / chiqim ----
@@ -70,17 +79,29 @@ export async function saveTransaction(input: unknown): Promise<ActionResult> {
   const { id, ...data } = parsed.data;
 
   await connectDB();
-  const problem = await checkCategoryAndWallet(data.type, data.categoryId, data.walletId);
-  if (problem) return fail(problem);
+  const checked = await checkCategoryAndWallet(data.type, data.categoryId, data.walletId);
+  if ("error" in checked) return fail(checked.error);
+  const { currency } = checked;
 
-  if (id) {
-    const existing = await Transaction.findOne({ _id: id, deletedAt: null });
-    if (!existing) return fail("Yozuv topilmadi — ehtimol o'chirilgan");
-    if (existing.debtId) return fail(DEBT_LOCKED);
-    existing.set(data);
+  // data.amount — hamyon valyutasida (eng kichik birlikda); bazaga so'mdagi qiymati ham yoziladi
+  const existing = id ? await Transaction.findOne({ _id: id, deletedAt: null }) : null;
+  if (id && !existing) return fail("Yozuv topilmadi — ehtimol o'chirilgan");
+  if (existing?.debtId) return fail(DEBT_LOCKED);
+
+  // Tahrirda valyuta o'zgarmagan bo'lsa — avvalgi kurs saqlanadi (izoh tuzatilsa so'mdagi qiymat siljimasin)
+  let rate = existing && currencyOf(existing) === currency && existing.rate ? existing.rate : null;
+  if (!rate) {
+    const fresh = await rateFor(currency);
+    if (!fresh.ok) return fail(fresh.error);
+    rate = fresh.rate;
+  }
+  const fields = { ...data, ...transactionAmounts(data.amount, currency, rate) };
+
+  if (existing) {
+    existing.set(fields);
     await existing.save();
   } else {
-    await Transaction.create({ ...data, source: "web" });
+    await Transaction.create({ ...fields, source: "web" });
   }
   refresh();
   return { ok: true };
@@ -94,6 +115,8 @@ const transferSchema = z
     fromWalletId: objectId,
     toWalletId: objectId,
     amount,
+    /** Tushgan hamyon valyutasida; valyutalar har xil bo'lgandagina kerak */
+    toAmount: amount.optional(),
     occurredAt,
     note,
   })
@@ -108,12 +131,26 @@ export async function saveTransfer(input: unknown): Promise<ActionResult> {
   await connectDB();
   const wallets = await Wallet.find({ _id: { $in: [data.fromWalletId, data.toWalletId] }, archived: false }).lean();
   if (wallets.length !== 2) return fail("Hamyonlarni tanlang");
+  const from = currencyOf(wallets.find((w) => w._id.equals(data.fromWalletId)));
+  const to = currencyOf(wallets.find((w) => w._id.equals(data.toWalletId)));
+
+  // Bir xil valyuta — tushgan summa chiqqani bilan teng; har xil bo'lsa kiritilgani yoki kurs bo'yicha
+  let toAmount: number | null = null;
+  if (from !== to) {
+    toAmount = data.toAmount ?? null;
+    if (!toAmount) {
+      const { rates } = await getRates();
+      if (!rates[from] || !rates[to]) return fail("Valyuta kursini olib bo'lmadi. Qabul qilingan summani qo'lda kiriting.");
+      toAmount = Math.max(1, toMinor((fromMinor(data.amount, from) * rates[from]) / rates[to], to));
+    }
+  }
+  const fields = { ...data, toAmount };
 
   if (id) {
-    const updated = await Transfer.updateOne({ _id: id, deletedAt: null }, data);
+    const updated = await Transfer.updateOne({ _id: id, deletedAt: null }, fields);
     if (updated.matchedCount === 0) return fail("O'tkazma topilmadi — ehtimol o'chirilgan");
   } else {
-    await Transfer.create({ ...data, source: "web" });
+    await Transfer.create({ ...fields, source: "web" });
   }
   refresh();
   return { ok: true };
@@ -191,8 +228,9 @@ export async function saveRecurring(input: unknown): Promise<ActionResult> {
   const { id, ...data } = parsed.data;
 
   await connectDB();
-  const problem = await checkCategoryAndWallet(data.type, data.categoryId, data.walletId);
-  if (problem) return fail(problem);
+  // Takroriy to'lov summasi hamyon valyutasida; so'mga har oy yozilgan paytdagi kurs bilan aylantiriladi
+  const checked = await checkCategoryAndWallet(data.type, data.categoryId, data.walletId);
+  if ("error" in checked) return fail(checked.error);
 
   if (id) {
     const updated = await Recurring.updateOne({ _id: id }, data);

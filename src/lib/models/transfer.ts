@@ -6,7 +6,10 @@ const transferSchema = new Schema(
   {
     fromWalletId: { type: Schema.Types.ObjectId, ref: "Wallet", required: true },
     toWalletId: { type: Schema.Types.ObjectId, ref: "Wallet", required: true },
+    /** Chiqqan hamyon valyutasida (eng kichik birlikda) */
     amount: moneyField,
+    /** Tushgan hamyon valyutasida; valyutalar bir xil bo'lsa null (= amount) */
+    toAmount: { type: Number, default: null },
     note: noteField,
     occurredAt: { type: Date, required: true, default: Date.now },
     source: sourceField,

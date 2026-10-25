@@ -1,6 +1,7 @@
 import "server-only";
 import type { Types } from "mongoose";
 import { balanceOf, sumsByWallet } from "@/lib/balances";
+import { currencyOf, formatCurrency, minorToUzs } from "@/lib/currency";
 import {
   currentMonthKey,
   daysInMonth,
@@ -14,6 +15,7 @@ import {
 import { calcDebt } from "@/lib/debts";
 import { Category, Debt, Recurring, Transaction, Wallet } from "@/lib/models";
 import { percentChange } from "@/lib/money";
+import { getRates } from "@/lib/rates";
 import { nextRecurringDate } from "@/lib/recurring";
 
 // AI yordamchi uchun bazadan FAQAT o'qish. Bu fayldagi funksiyalar hech narsani o'zgartirmaydi.
@@ -27,7 +29,7 @@ type TxType = "kirim" | "chiqim";
 async function lookups() {
   const [categories, wallets] = await Promise.all([
     Category.find({}, { name: 1, type: 1, systemKey: 1 }).lean(),
-    Wallet.find({}, { name: 1, kind: 1, initialBalance: 1, archived: 1 }).lean(),
+    Wallet.find({}, { name: 1, kind: 1, initialBalance: 1, archived: 1, currency: 1 }).lean(),
   ]);
   const category = (id: unknown) => categories.find((c) => c._id.equals(String(id)));
   return {
@@ -40,6 +42,7 @@ async function lookups() {
       return Boolean(key && key !== "oylik");
     },
     walletName: (id: unknown) => wallets.find((w) => w._id.equals(String(id)))?.name ?? "O'chirilgan hamyon",
+    walletCurrency: (id: unknown) => currencyOf(wallets.find((w) => w._id.equals(String(id)))),
   };
 }
 
@@ -290,6 +293,7 @@ export async function searchEntries(query: EntrySearch) {
       date: formatDateTime(t.occurredAt),
       type: t.type,
       amount: t.amount,
+      amountInCurrency: t.originalAmount && t.currency !== "UZS" ? formatCurrency(t.originalAmount, currencyOf(t)) : undefined,
       category: look.categoryName(t.categoryId),
       wallet: look.walletName(t.walletId),
       note: t.note || null,
@@ -307,7 +311,7 @@ export async function budgetState(now: Date) {
   const first = shiftMonth(current, -(BUDGET_HISTORY_MONTHS - 1));
   const { start } = monthRange(first);
 
-  const [wallets, sums, flows] = await Promise.all([
+  const [wallets, sums, flows, { rates, info }] = await Promise.all([
     Wallet.find().sort({ order: 1, createdAt: 1 }).lean(),
     sumsByWallet(),
     Transaction.aggregate<{ _id: { month: string; type: TxType }; total: number }>([
@@ -319,14 +323,22 @@ export async function budgetState(now: Date) {
         },
       },
     ]),
+    getRates(),
   ]);
 
-  const rows = wallets.map((w) => ({
-    wallet: w.name,
-    kind: w.kind,
-    balance: balanceOf(w.initialBalance, sums.get(w._id)),
-    archived: w.archived,
-  }));
+  // balance — so'mda (bugungi kurs bilan); chet valyutali hamyonda asl qoldiq ham matn ko'rinishida
+  const rows = wallets.map((w) => {
+    const currency = currencyOf(w);
+    const own = balanceOf(w.initialBalance, sums.get(w._id));
+    return {
+      wallet: w.name,
+      kind: w.kind,
+      currency,
+      balance: minorToUzs(own, currency, rates[currency]),
+      balanceInCurrency: currency === "UZS" ? undefined : formatCurrency(own, currency),
+      archived: w.archived,
+    };
+  });
   const total = rows.reduce((s, w) => s + w.balance, 0);
   const net = (m: string) =>
     flows
@@ -353,6 +365,12 @@ export async function budgetState(now: Date) {
   return {
     total,
     wallets: rows.filter((w) => !w.archived || w.balance !== 0),
+    /** Chet valyutalar kursi: 1 birlik necha so'm */
+    exchangeRates: Object.fromEntries(
+      Object.entries(info)
+        .filter(([c]) => rows.some((w) => w.currency === c))
+        .map(([c, r]) => [c, Math.round(r.rate * 100) / 100]),
+    ),
     noInitialBalances: wallets.every((w) => w.initialBalance === 0),
     history,
   };
@@ -410,16 +428,25 @@ export async function debtsState(now: Date) {
 
 /** Har oy avtomatik yoziladigan to'lovlar (ijara, internet, obunalar...) */
 export async function recurringState() {
-  const look = await lookups();
-  const items = await Recurring.find().sort({ active: -1, dayOfMonth: 1 }).lean();
+  const [look, items, { rates }] = await Promise.all([
+    lookups(),
+    Recurring.find().sort({ active: -1, dayOfMonth: 1 }).lean(),
+    getRates(),
+  ]);
+  // Summa hamyon valyutasida — so'mga bugungi kurs bilan
+  const uzs = (r: (typeof items)[number]) => {
+    const currency = look.walletCurrency(r.walletId);
+    return minorToUzs(r.amount, currency, rates[currency]);
+  };
   const active = items.filter((r) => r.active);
   return {
-    monthlyExpense: active.filter((r) => r.type === "chiqim").reduce((s, r) => s + r.amount, 0),
-    monthlyIncome: active.filter((r) => r.type === "kirim").reduce((s, r) => s + r.amount, 0),
+    monthlyExpense: active.filter((r) => r.type === "chiqim").reduce((s, r) => s + uzs(r), 0),
+    monthlyIncome: active.filter((r) => r.type === "kirim").reduce((s, r) => s + uzs(r), 0),
     items: items.map((r) => ({
       name: r.name,
       type: r.type,
-      amount: r.amount,
+      amount: uzs(r),
+      amountInCurrency: look.walletCurrency(r.walletId) === "UZS" ? undefined : formatCurrency(r.amount, look.walletCurrency(r.walletId)),
       category: look.categoryName(r.categoryId),
       wallet: look.walletName(r.walletId),
       dayOfMonth: r.dayOfMonth,

@@ -1,6 +1,7 @@
 "use client";
 
 import { createElement } from "react";
+import { CURRENCY_META } from "@/lib/currency";
 import { getIcon } from "@/lib/icons";
 import type { CategoryOption, WalletOption } from "@/lib/entries";
 import { cn } from "@/lib/utils";
@@ -78,6 +79,12 @@ export function WalletPicker({
           >
             <span style={{ color: wallet.color }}>{createElement(getIcon(wallet.icon), { className: "size-4" })}</span>
             {wallet.name}
+            {/* So'mdan boshqa valyuta — belgisi bilan */}
+            {wallet.currency !== "UZS" && (
+              <span className="rounded-full bg-muted px-1.5 py-px text-[11px] font-semibold text-muted-foreground">
+                {CURRENCY_META[wallet.currency].symbol}
+              </span>
+            )}
           </button>
         );
       })}

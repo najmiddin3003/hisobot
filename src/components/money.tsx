@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { formatAmount } from "@/lib/money";
+import { CURRENCY_META, formatMinor, type Currency } from "@/lib/currency";
 import { cn } from "@/lib/utils";
 
 const ROLL_MS = 700;
@@ -36,17 +36,29 @@ function useRollingNumber(target: number) {
 }
 
 /**
- * Katta summa: serif raqamlar, "so'm" kichikroq va xiraroq. Rang (masalan text-income)
- * tashqaridan beriladi — birlik ham shu rangda, faqat shaffofroq.
+ * Katta summa: serif raqamlar, birlik ("so'm", "$", "BTC") kichikroq va xiraroq. Rang (masalan text-income)
+ * tashqaridan beriladi — birlik ham shu rangda, faqat shaffofroq. amount — valyutaning eng kichik birligida.
  */
-export function Money({ amount, sign = false, className }: { amount: number; sign?: boolean; className?: string }) {
+export function Money({
+  amount,
+  currency = "UZS",
+  sign = false,
+  className,
+}: {
+  amount: number;
+  currency?: Currency;
+  sign?: boolean;
+  className?: string;
+}) {
   const shown = useRollingNumber(amount);
   const prefix = shown < 0 ? "−" : sign && shown > 0 ? "+" : "";
   return (
     <span className={cn("money-display whitespace-nowrap", className)}>
       {prefix}
-      {formatAmount(shown)}
-      <span className="ml-[0.25em] font-sans text-[max(0.45em,0.75rem)] font-medium tracking-normal opacity-60">so&apos;m</span>
+      {formatMinor(shown, currency)}
+      <span className="ml-[0.25em] font-sans text-[max(0.45em,0.75rem)] font-medium tracking-normal opacity-60">
+        {CURRENCY_META[currency].symbol}
+      </span>
     </span>
   );
 }

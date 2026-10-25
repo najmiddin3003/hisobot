@@ -1,12 +1,19 @@
 // Kirim-chiqim sahifasi uchun umumiy turlar (server va brauzer uchun)
 import { dayKey, formatDayHeading } from "@/lib/dates";
+import type { Currency } from "@/lib/currency";
 import type { Source, TxType, WalletKind } from "@/lib/domain";
 
 export type CategoryOption = { id: string; name: string; type: TxType; icon: string; color: string };
-export type WalletOption = { id: string; name: string; kind: WalletKind; icon: string; color: string };
-export type EntryOptions = { categories: CategoryOption[]; wallets: WalletOption[] };
+export type WalletOption = { id: string; name: string; kind: WalletKind; icon: string; color: string; currency: Currency };
+/** rates — hamyonlarda ishlatilgan chet valyutalar kursi (1 birlik necha so'm), oynada taxminiy so'm ko'rsatish uchun */
+export type EntryOptions = {
+  categories: CategoryOption[];
+  wallets: WalletOption[];
+  rates: Partial<Record<Currency, number>>;
+};
 
 type Brief = { name: string; icon: string; color: string };
+type WalletBrief = Brief & { currency: Currency };
 
 type EntryBase = {
   id: string;
@@ -25,17 +32,23 @@ export type TxEntry = EntryBase & {
   categoryId: string;
   category: Brief;
   walletId: string;
-  wallet: Brief;
+  wallet: WalletBrief;
   debtId: string | null;
   recurringId: string | null;
+  /** amount — so'mda; chet valyutali yozuvda asl summa (eng kichik birlikda) va kurs */
+  currency: Currency;
+  originalAmount: number | null;
+  rate: number | null;
 };
 
 export type TransferEntry = EntryBase & {
   kind: "transfer";
+  /** amount — chiqqan hamyon valyutasida, toAmount — tushgan hamyon valyutasida (valyutalar teng bo'lsa = amount) */
   fromWalletId: string;
-  fromWallet: Brief;
+  fromWallet: WalletBrief;
   toWalletId: string;
-  toWallet: Brief;
+  toWallet: WalletBrief;
+  toAmount: number;
 };
 
 export type Entry = TxEntry | TransferEntry;

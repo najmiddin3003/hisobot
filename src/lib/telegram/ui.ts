@@ -1,7 +1,7 @@
 import { InlineKeyboard, Keyboard } from "grammy";
 import type { Types } from "mongoose";
 import { formatDateTime } from "@/lib/dates";
-import { formatMoney } from "@/lib/money";
+import { formatCurrency, type Currency } from "@/lib/currency";
 import { esc } from "./parse";
 
 export const MENU = {
@@ -28,7 +28,9 @@ type Named = { _id: Types.ObjectId; name: string };
 
 export type EntryDraft = {
   type: "kirim" | "chiqim";
+  /** Valyutaning eng kichik birligida; currency yo'q (eski holat) — so'm */
   amount: number;
+  currency?: Currency;
   note: string;
   categoryId: string | null;
   walletId: string | null;
@@ -40,7 +42,7 @@ const nameOf = (items: Named[], id: string | null) => items.find((i) => i._id.eq
 export function renderEntryDraft(draft: EntryDraft, categories: Named[], wallets: Named[], title?: string) {
   const isIncome = draft.type === "kirim";
   return [
-    title ?? `${isIncome ? "➕" : "➖"} <b>${isIncome ? "Kirim" : "Chiqim"}: ${formatMoney(draft.amount)}</b>`,
+    title ?? `${isIncome ? "➕" : "➖"} <b>${isIncome ? "Kirim" : "Chiqim"}: ${formatCurrency(draft.amount, draft.currency ?? "UZS")}</b>`,
     `🏷 ${esc(nameOf(categories, draft.categoryId) ?? "Kategoriya tanlanmagan")}`,
     `👛 ${esc(nameOf(wallets, draft.walletId) ?? "Hamyon tanlanmagan")}`,
     draft.note ? `📝 ${esc(draft.note)}` : "",

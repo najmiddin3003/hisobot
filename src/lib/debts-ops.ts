@@ -22,8 +22,9 @@ async function systemCategoryId(key: SystemCategoryKey) {
   return category?._id ?? null;
 }
 
+/** Qarz va kreditlar so'mda yuritiladi — faqat so'mli hamyon (eski hamyonlarda valyuta yo'q = so'm) */
 export async function isActiveWallet(walletId: string) {
-  return Boolean(await Wallet.exists({ _id: walletId, archived: false }));
+  return Boolean(await Wallet.exists({ _id: walletId, archived: false, currency: { $in: ["UZS", null] } }));
 }
 
 const entryNote = (counterparty: string, text: string) => (text ? `${counterparty} — ${text}` : counterparty);

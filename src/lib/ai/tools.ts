@@ -64,7 +64,8 @@ const TOOLS = {
     description:
       "Find individual income/expense entries. Filter by month or date range, type, category name (partial match), text " +
       "in the note (e.g. 'taksi', 'kofe') and minimum amount. Returns the matched count and sums over ALL matches plus " +
-      "the newest entries (date, time, amount, category, wallet, note, source). Use it to dig into a category or habit.",
+      "the newest entries (date, time, amount, category, wallet, note, source). Amounts are in so'm; entries from a " +
+      "foreign-currency wallet also carry amountInCurrency. Use it to dig into a category or habit.",
     input: z.object({
       month: monthKey.optional(),
       from: dateKey.optional().describe("Start date YYYY-MM-DD, inclusive"),
@@ -98,7 +99,9 @@ const TOOLS = {
     progress: "Budjet o'qilmoqda",
     description:
       "Current balance of every wallet (cash, Uzcard, Humo...), total money (the user's budget/savings) and how the total " +
-      "changed over the last 6 months (balance at the start and end of each month, amount saved).",
+      "changed over the last 6 months (balance at the start and end of each month, amount saved). Wallets may hold UZS, USD, " +
+      "EUR, USDT or BTC: `balance` is always the so'm equivalent at today's rate, `balanceInCurrency` is the wallet's own " +
+      "amount, `exchangeRates` gives so'm per 1 unit.",
     input: z.object({}),
     run: (_input, { now }) => budgetState(now),
   }),

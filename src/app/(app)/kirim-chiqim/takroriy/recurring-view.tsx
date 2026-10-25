@@ -28,6 +28,7 @@ import { Label } from "@/components/ui/label";
 import { MonthDayPicker } from "@/components/ui/month-day-picker";
 import { Switch } from "@/components/ui/switch";
 import type { RecurringItem } from "@/lib/data/entries";
+import { fromMinor, toMinor, type Currency } from "@/lib/currency";
 import { formatDate } from "@/lib/dates";
 import type { TxType } from "@/lib/domain";
 import type { EntryOptions } from "@/lib/entries";
@@ -45,8 +46,9 @@ export function RecurringView({ items, options }: { items: RecurringItem[]; opti
   };
 
   const active = items.filter((i) => i.active);
-  const monthlyExpense = active.filter((i) => i.type === "chiqim").reduce((sum, i) => sum + i.amount, 0);
-  const monthlyIncome = active.filter((i) => i.type === "kirim").reduce((sum, i) => sum + i.amount, 0);
+  // Har xil valyutadagi to'lovlar so'mda (bugungi kurs bilan) qo'shiladi
+  const monthlyExpense = active.filter((i) => i.type === "chiqim").reduce((sum, i) => sum + i.amountUzs, 0);
+  const monthlyIncome = active.filter((i) => i.type === "kirim").reduce((sum, i) => sum + i.amountUzs, 0);
 
   return (
     <div className="space-y-6">
@@ -149,11 +151,17 @@ function RecurringCard({ item, onEdit }: { item: RecurringItem; onEdit: () => vo
           />
         </div>
 
-        <Money
-          amount={item.type === "kirim" ? item.amount : -item.amount}
-          sign
-          className={cn("block truncate text-[1.75rem]", item.type === "kirim" ? "text-income" : "text-expense")}
-        />
+        <div className="space-y-0.5">
+          <Money
+            amount={item.type === "kirim" ? item.amount : -item.amount}
+            currency={item.wallet.currency}
+            sign
+            className={cn("block truncate text-[1.75rem]", item.type === "kirim" ? "text-income" : "text-expense")}
+          />
+          {item.wallet.currency !== "UZS" && (
+            <p className="text-xs text-muted-foreground">≈ {formatMoney(item.amountUzs)} · bugungi kurs bilan</p>
+          )}
+        </div>
 
         <div className="flex items-center justify-between gap-2 rounded-lg bg-muted/50 px-3 py-2 text-xs">
           <span className="text-muted-foreground">Har oyning {item.dayOfMonth}-kuni</span>
@@ -215,6 +223,14 @@ function RecurringForm({
 
   const categories = options.categories.filter((c) => c.type === type);
   const ready = name.trim() && amount > 0 && categoryId && walletId;
+  // Summa tanlangan hamyon valyutasida; hamyon almashsa yozilgan raqam saqlanadi
+  const currencyOfWallet = (id: string): Currency => options.wallets.find((w) => w.id === id)?.currency ?? "UZS";
+  const currency = currencyOfWallet(walletId);
+  const changeWallet = (id: string) => {
+    const next = currencyOfWallet(id);
+    if (next !== currency) setAmount((a) => toMinor(fromMinor(a, currency), next));
+    setWalletId(id);
+  };
 
   const changeType = (next: TxType) => {
     setType(next);
@@ -287,7 +303,7 @@ function RecurringForm({
 
       <div className="space-y-2">
         <Label htmlFor="recurring-amount">Summa</Label>
-        <AmountInput id="recurring-amount" value={amount} onChange={setAmount} />
+        <AmountInput id="recurring-amount" value={amount} onChange={setAmount} currency={currency} />
       </div>
 
       <div className="space-y-2">
@@ -297,7 +313,7 @@ function RecurringForm({
 
       <div className="space-y-2">
         <Label>Hamyon</Label>
-        <WalletPicker wallets={options.wallets} value={walletId} onChange={setWalletId} />
+        <WalletPicker wallets={options.wallets} value={walletId} onChange={changeWallet} />
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">

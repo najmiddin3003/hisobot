@@ -1,5 +1,7 @@
 import "server-only";
 import { balanceOf, sumsByWallet } from "@/lib/balances";
+import { currencyOf, formatCurrency, minorToUzs } from "@/lib/currency";
+import { getRates } from "@/lib/rates";
 import { MONTH_NAMES, currentMonthKey, formatDate, monthLabel, monthRange, tashkentDate, tashkentToday } from "@/lib/dates";
 import { Category, Transaction, Wallet } from "@/lib/models";
 import { formatMoney } from "@/lib/money";
@@ -39,12 +41,18 @@ export async function buildReport(period: ReportPeriod, now = new Date()) {
     Wallet.find({ archived: false }).sort({ order: 1 }).lean(),
     sumsByWallet(),
   ]);
+  const { rates } = await getRates();
 
   const income = totals.find((t) => t._id === "kirim")?.total ?? 0;
   const expense = totals.find((t) => t._id === "chiqim")?.total ?? 0;
   const count = totals.reduce((sum, t) => sum + t.count, 0);
-  const balances = wallets.map((w) => ({ name: w.name, balance: balanceOf(w.initialBalance, sums.get(w._id)) }));
-  const total = balances.reduce((sum, w) => sum + w.balance, 0);
+  // Har bir hamyon o'z valyutasida; jami — so'mda, bugungi kurs bilan
+  const balances = wallets.map((w) => {
+    const currency = currencyOf(w);
+    const own = balanceOf(w.initialBalance, sums.get(w._id));
+    return { name: w.name, currency, own, uzs: minorToUzs(own, currency, rates[currency]) };
+  });
+  const total = balances.reduce((sum, w) => sum + w.uzs, 0);
 
   const lines = [
     `📊 <b>${esc(title)}</b>`,
@@ -62,7 +70,10 @@ export async function buildReport(period: ReportPeriod, now = new Date()) {
     }
   }
   lines.push("", "<b>Hamyonlar:</b>");
-  for (const w of balances) lines.push(`• ${esc(w.name)} — ${formatMoney(w.balance)}`);
+  for (const w of balances) {
+    const extra = w.currency === "UZS" ? "" : ` (≈ ${formatMoney(w.uzs)})`;
+    lines.push(`• ${esc(w.name)} — ${formatCurrency(w.own, w.currency)}${extra}`);
+  }
   lines.push(`💰 Jami: <b>${formatMoney(total)}</b>`);
   return lines.join("\n");
 }

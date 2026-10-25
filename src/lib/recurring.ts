@@ -7,7 +7,9 @@ import {
   tashkentDate,
   tashkentToday,
 } from "@/lib/dates";
-import { Recurring, Transaction } from "@/lib/models";
+import { currencyOf, formatCurrency } from "@/lib/currency";
+import { Recurring, Transaction, Wallet } from "@/lib/models";
+import { getRates, transactionAmounts } from "@/lib/rates";
 import { notifyRecurringAdded } from "@/lib/telegram/notify";
 
 /** Shu oyda to'lov kuni (oy qisqa bo'lsa — oxirgi kuni) */
@@ -42,9 +44,19 @@ export async function generateDueRecurring(now = new Date()) {
     active: true,
     $or: [{ lastGeneratedMonth: null }, { lastGeneratedMonth: { $lt: current } }],
   }).lean();
+  if (items.length === 0) return 0;
 
-  const created: { name: string; amount: number; type: "kirim" | "chiqim"; date: Date }[] = [];
+  // Takroriy to'lov summasi hamyon valyutasida — so'mga yozilgan paytdagi kurs bilan aylantiriladi
+  const [wallets, { rates }] = await Promise.all([
+    Wallet.find({ _id: { $in: items.map((i) => i.walletId) } }, { currency: 1 }).lean(),
+    getRates(),
+  ]);
+
+  const created: { name: string; amount: string; type: "kirim" | "chiqim"; date: Date }[] = [];
   for (const item of items) {
+    const currency = currencyOf(wallets.find((w) => w._id.equals(item.walletId)));
+    // Kurs hali olinmagan bo'lsa — keyingi safar (kurs kelganda) yoziladi
+    if (!rates[currency]) continue;
     let last = item.lastGeneratedMonth;
     for (let i = 0; i < 12; i++) {
       const month = shiftMonth(last ?? shiftMonth(current, -1), 1);
@@ -63,7 +75,7 @@ export async function generateDueRecurring(now = new Date()) {
       const occurredAt = date > now ? now : date;
       await Transaction.create({
         type: item.type,
-        amount: item.amount,
+        ...transactionAmounts(item.amount, currency, rates[currency]),
         categoryId: item.categoryId,
         walletId: item.walletId,
         note: item.note ? `${item.name} — ${item.note}` : item.name,
@@ -72,7 +84,7 @@ export async function generateDueRecurring(now = new Date()) {
         recurringId: item._id,
       });
       last = month;
-      created.push({ name: item.name, amount: item.amount, type: item.type, date: occurredAt });
+      created.push({ name: item.name, amount: formatCurrency(item.amount, currency), type: item.type, date: occurredAt });
     }
   }
   // Telegram'da xabar beriladi (bot sozlangan bo'lsa)

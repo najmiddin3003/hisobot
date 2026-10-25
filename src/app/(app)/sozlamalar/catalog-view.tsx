@@ -40,6 +40,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { CategoryItem, WalletItem } from "@/lib/data/settings";
 import { WALLET_KIND_LABELS, type TxType } from "@/lib/domain";
+import { formatCurrency } from "@/lib/currency";
 import { formatMoney } from "@/lib/money";
 import { cn } from "@/lib/utils";
 import {
@@ -387,8 +388,9 @@ export function WalletsCard({ wallets, className }: { wallets: WalletItem[]; cla
                   <span
                     className={cn("font-semibold text-foreground tabular-nums", wallet.balance < 0 && "text-expense")}
                   >
-                    {formatMoney(wallet.balance)}
+                    {formatCurrency(wallet.balance, wallet.currency)}
                   </span>
+                  {wallet.currency !== "UZS" && ` ≈ ${formatMoney(wallet.balanceUzs)}`}
                   {` · ${WALLET_KIND_LABELS[wallet.kind]} · ${entriesText(wallet.entries)}`}
                 </>
               }

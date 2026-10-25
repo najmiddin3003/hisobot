@@ -63,6 +63,17 @@ Bot o'zi xabar beradi: saytga yangi kirish bo'lganda, takroriy to'lov yozilganda
 
 `npm run bot:dev` ishga tushirilsa, webhook o'chadi — Vercel'dagi bot yana ishlashi uchun keyin `npm run bot:webhook` ni qayta bajaring.
 
+## Valyutalar
+
+Hamyon ochishda valyuta tanlanadi: so'm, dollar, yevro, USDT yoki bitkoin (keyin o'zgarmaydi).
+
+- Hamyon qoldig'i va undagi yozuvlar o'sha valyutada ko'rinadi; hisobotlar (Dashboard, kirim-chiqim jami, AI) so'mda.
+- Har bir yozuvning so'mdagi qiymati **kiritilgan paytdagi kurs** bilan saqlanadi — kurs keyin o'zgarsa ham o'tgan oylar hisoboti o'zgarmaydi. Jami budjet esa bugungi kurs bilan hisoblanadi.
+- Kurslar: dollar va yevro — Markaziy bank (cbu.uz), USDT va bitkoin — CoinGecko (zaxira — Binance). Bazada saqlanadi (`rates`), dollar/yevro 6 soatda, kripto 15 daqiqada bir yangilanadi; manba ishlamasa oxirgi ma'lum kurs ishlatiladi.
+- Har xil valyutali hamyonlar o'rtasida o'tkazmada tushgan summa kurs bo'yicha o'zi qo'yiladi, haqiqiy almashtirgan summangizni yozsangiz bo'ladi.
+- Qarz va kreditlar so'mda yuritiladi — ular uchun faqat so'mli hamyon tanlanadi.
+- Botda valyutani summa yonida yozing: `20$ taksi`, `15 eur`, `0.001 btc`, `100 usdt` — yozuv shu valyutadagi hamyonga tushadi.
+
 ## AI yordamchi
 
 1. [console.anthropic.com](https://console.anthropic.com) → **API Keys** → yangi kalit yarating va `.env.local` dagi `ANTHROPIC_API_KEY` ga yozing.

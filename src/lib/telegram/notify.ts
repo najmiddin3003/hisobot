@@ -54,10 +54,11 @@ export function notifyNewWebLogin({ device, ip, closedPrevious }: { device: stri
   );
 }
 
-export function notifyRecurringAdded(items: { name: string; amount: number; type: "kirim" | "chiqim"; date: Date }[]) {
+/** amount — tayyor yozilgan summa (hamyon valyutasida) */
+export function notifyRecurringAdded(items: { name: string; amount: string; type: "kirim" | "chiqim"; date: Date }[]) {
   if (items.length === 0) return;
   const lines = items.map(
-    (i) => `${i.type === "kirim" ? "➕" : "➖"} ${esc(i.name)} — ${formatMoney(i.amount)} (${formatDate(i.date)})`,
+    (i) => `${i.type === "kirim" ? "➕" : "➖"} ${esc(i.name)} — ${i.amount} (${formatDate(i.date)})`,
   );
   notifyOwnerLater(["🔁 <b>Takroriy to'lovlar yozildi</b>", ...lines].join("\n"));
 }

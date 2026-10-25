@@ -1,4 +1,5 @@
 import { Schema, type InferSchemaType } from "mongoose";
+import { CURRENCIES } from "@/lib/currency";
 import { WALLET_KINDS } from "@/lib/domain";
 import { defineModel } from "./_shared";
 
@@ -6,7 +7,9 @@ const walletSchema = new Schema(
   {
     name: { type: String, required: true, trim: true, maxlength: 60 },
     kind: { type: String, enum: WALLET_KINDS, required: true, default: "naqd" },
-    /** Tizimni boshlagandagi qoldiq; joriy qoldiq = shu + kirimlar − chiqimlar ± o'tkazmalar */
+    /** Hamyon valyutasi; yaratilgandan keyin o'zgarmaydi. Eski hamyonlarda yo'q — so'm */
+    currency: { type: String, enum: CURRENCIES, default: "UZS" },
+    /** Tizimni boshlagandagi qoldiq (hamyon valyutasining eng kichik birligida); joriy qoldiq = shu + kirimlar − chiqimlar ± o'tkazmalar */
     initialBalance: {
       type: Number,
       default: 0,
