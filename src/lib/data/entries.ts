@@ -1,13 +1,13 @@
 import "server-only";
+import { cache } from "react";
 import type { Types } from "mongoose";
-import { requireUser } from "@/lib/auth/dal";
+import { readAsUser } from "@/lib/auth/dal";
 import { currencyOf, minorToUzs, type Currency, type Rates } from "@/lib/currency";
-import { connectDB } from "@/lib/db";
 import { monthRange, resolveMonthParam } from "@/lib/dates";
 import type { Entry, EntryFilters, EntryOptions, TransferEntry, TxEntry } from "@/lib/entries";
 import { Category, Recurring, Transaction, Transfer, Wallet, type CategoryDoc, type WalletDoc } from "@/lib/models";
 import { getRates } from "@/lib/rates";
-import { generateDueRecurring, nextRecurringDate } from "@/lib/recurring";
+import { nextRecurringDate } from "@/lib/recurring";
 
 type WithId<T> = T & { _id: Types.ObjectId };
 type Brief = { name: string; icon: string; color: string };
@@ -15,7 +15,8 @@ type Brief = { name: string; icon: string; color: string };
 const MISSING: Brief = { name: "O'chirilgan", icon: "Ellipsis", color: "#64748b" };
 const MISSING_WALLET = { ...MISSING, currency: "UZS" as Currency };
 
-async function loadLookups() {
+// Bitta so'rov davomida bir marta (masalan, sahifa va tezkor qo'shish tugmasi ikkalasi so'raydi)
+const loadLookups = cache(async () => {
   const [categories, wallets, { rates }] = await Promise.all([
     Category.find().sort({ order: 1, createdAt: 1 }).lean(),
     Wallet.find().sort({ order: 1, createdAt: 1 }).lean(),
@@ -39,7 +40,7 @@ async function loadLookups() {
       return doc ? { ...brief(doc), currency: currencyOf(doc) } : MISSING_WALLET;
     },
   };
-}
+});
 type Lookups = Awaited<ReturnType<typeof loadLookups>>;
 
 /** Qo'lda tanlash mumkin bo'lgan kategoriya va hamyonlar (qarz/kredit tizim kategoriyalarisiz) */
@@ -144,125 +145,120 @@ async function monthTotals(start: Date, end: Date) {
 
 /** Kirim-chiqim sahifasi: tanlangan oy yozuvlari (filtr bilan), oy jami va forma uchun ro'yxatlar */
 export async function getEntriesPage(monthParam: unknown, filters: EntryFilters) {
-  await requireUser();
-  await connectDB();
-  await generateDueRecurring();
+  return readAsUser(async () => {
+    const month = resolveMonthParam(monthParam);
+    const { start, end } = monthRange(month);
+    // Ro'yxatlar yozuvlar bilan bir vaqtda olinadi; faqat qidiruvda (kategoriya nomi bo'yicha) oldinroq kerak
+    const pendingLookups = loadLookups();
+    const inMonth = { deletedAt: null, occurredAt: { $gte: start, $lt: end } };
+    const search = filters.q ? new RegExp(escapeRegex(filters.q), "i") : null;
 
-  // Oy seans tekshiruvidan keyin aniqlanadi — joriy vaqt faqat so'rov paytida o'qiladi
-  const month = resolveMonthParam(monthParam);
-  const { start, end } = monthRange(month);
-  const lookups = await loadLookups();
-  const inMonth = { deletedAt: null, occurredAt: { $gte: start, $lt: end } };
-  const search = filters.q ? new RegExp(escapeRegex(filters.q), "i") : null;
+    const txFilter: Record<string, unknown> = { ...inMonth };
+    if (filters.type === "kirim" || filters.type === "chiqim") txFilter.type = filters.type;
+    if (filters.categoryId) txFilter.categoryId = filters.categoryId;
+    if (filters.walletId) txFilter.walletId = filters.walletId;
+    if (filters.source) txFilter.source = filters.source;
+    if (search) {
+      const categoryIds = (await pendingLookups).categories.filter((c) => search.test(c.name)).map((c) => c._id);
+      txFilter.$or = [{ note: search }, { categoryId: { $in: categoryIds } }];
+    }
 
-  const txFilter: Record<string, unknown> = { ...inMonth };
-  if (filters.type === "kirim" || filters.type === "chiqim") txFilter.type = filters.type;
-  if (filters.categoryId) txFilter.categoryId = filters.categoryId;
-  if (filters.walletId) txFilter.walletId = filters.walletId;
-  if (filters.source) txFilter.source = filters.source;
-  if (search) {
-    const categoryIds = lookups.categories.filter((c) => search.test(c.name)).map((c) => c._id);
-    txFilter.$or = [{ note: search }, { categoryId: { $in: categoryIds } }];
-  }
+    // O'tkazmalarda kategoriya yo'q — kategoriya yoki kirim/chiqim tanlansa ular ko'rsatilmaydi
+    const includeTransfers = !filters.categoryId && (!filters.type || filters.type === "otkazma");
+    const transferFilter: Record<string, unknown> = { ...inMonth };
+    if (filters.walletId) transferFilter.$or = [{ fromWalletId: filters.walletId }, { toWalletId: filters.walletId }];
+    if (filters.source) transferFilter.source = filters.source;
+    if (search) transferFilter.note = search;
 
-  // O'tkazmalarda kategoriya yo'q — kategoriya yoki kirim/chiqim tanlansa ular ko'rsatilmaydi
-  const includeTransfers = !filters.categoryId && (!filters.type || filters.type === "otkazma");
-  const transferFilter: Record<string, unknown> = { ...inMonth };
-  if (filters.walletId) transferFilter.$or = [{ fromWalletId: filters.walletId }, { toWalletId: filters.walletId }];
-  if (filters.source) transferFilter.source = filters.source;
-  if (search) transferFilter.note = search;
+    const [lookups, transactions, transfers, totals] = await Promise.all([
+      pendingLookups,
+      filters.type === "otkazma" ? [] : findTransactions(txFilter, 1000, { occurredAt: -1 }),
+      includeTransfers ? findTransfers(transferFilter, 500, { occurredAt: -1 }) : [],
+      monthTotals(start, end),
+    ]);
 
-  const [transactions, transfers, totals] = await Promise.all([
-    filters.type === "otkazma" ? [] : findTransactions(txFilter, 1000, { occurredAt: -1 }),
-    includeTransfers ? findTransfers(transferFilter, 500, { occurredAt: -1 }) : [],
-    monthTotals(start, end),
-  ]);
+    const entries: Entry[] = [
+      ...transactions.map((t) => toTxEntry(t, lookups)),
+      ...transfers.map((t) => toTransferEntry(t, lookups)),
+    ].sort(byOccurredDesc);
 
-  const entries: Entry[] = [
-    ...transactions.map((t) => toTxEntry(t, lookups)),
-    ...transfers.map((t) => toTransferEntry(t, lookups)),
-  ].sort(byOccurredDesc);
-
-  return { entries, totals, options: selectableOptions(lookups.categories, lookups.wallets, lookups.rates) };
+    return { entries, totals, options: selectableOptions(lookups.categories, lookups.wallets, lookups.rates) };
+  });
 }
 
 /** Dashboard uchun oxirgi yozuvlar (va tezkor qo'shish oynasi uchun ro'yxatlar) */
 export async function getRecentEntries(limit = 6) {
-  await requireUser();
-  await connectDB();
-  await generateDueRecurring();
-  const lookups = await loadLookups();
-  const [transactions, transfers] = await Promise.all([
-    findTransactions({ deletedAt: null }, limit, { occurredAt: -1 }),
-    findTransfers({ deletedAt: null }, limit, { occurredAt: -1 }),
-  ]);
-  const entries = [
-    ...transactions.map((t) => toTxEntry(t, lookups)),
-    ...transfers.map((t) => toTransferEntry(t, lookups)),
-  ]
-    .sort(byOccurredDesc)
-    .slice(0, limit);
-  return { entries, options: selectableOptions(lookups.categories, lookups.wallets, lookups.rates) };
+  return readAsUser(async () => {
+    const [lookups, transactions, transfers] = await Promise.all([
+      loadLookups(),
+      findTransactions({ deletedAt: null }, limit, { occurredAt: -1 }),
+      findTransfers({ deletedAt: null }, limit, { occurredAt: -1 }),
+    ]);
+    const entries = [
+      ...transactions.map((t) => toTxEntry(t, lookups)),
+      ...transfers.map((t) => toTransferEntry(t, lookups)),
+    ]
+      .sort(byOccurredDesc)
+      .slice(0, limit);
+    return { entries, options: selectableOptions(lookups.categories, lookups.wallets, lookups.rates) };
+  });
 }
 
 /** Oyning eng katta chiqimlari (seans chaqiruvchi tomonda tekshirilgan bo'lishi kerak) */
 export async function loadTopExpenses(start: Date, end: Date, limit = 5) {
-  const lookups = await loadLookups();
-  const rows = await findTransactions(
-    { deletedAt: null, type: "chiqim", occurredAt: { $gte: start, $lt: end } },
-    limit,
-    { amount: -1, occurredAt: -1 },
-  );
+  const [lookups, rows] = await Promise.all([
+    loadLookups(),
+    findTransactions({ deletedAt: null, type: "chiqim", occurredAt: { $gte: start, $lt: end } }, limit, { amount: -1, occurredAt: -1 }),
+  ]);
   return rows.map((t) => toTxEntry(t, lookups));
 }
 
 /** Savatcha: o'chirilgan yozuvlar, oxirgi o'chirilgani birinchi */
 export async function getTrash() {
-  await requireUser();
-  await connectDB();
-  const lookups = await loadLookups();
-  const deleted = { deletedAt: { $ne: null } };
-  const [transactions, transfers] = await Promise.all([
-    // Qarz bilan birga o'chirilgan yozuvlar savatchada ko'rsatilmaydi — ular qarzning bir qismi
-    findTransactions({ ...deleted, debtId: null }, 300, { deletedAt: -1 }),
-    findTransfers(deleted, 300, { deletedAt: -1 }),
-  ]);
-  return [...transactions.map((t) => toTxEntry(t, lookups)), ...transfers.map((t) => toTransferEntry(t, lookups))].sort(
-    (a, b) => (b.deletedAt ?? "").localeCompare(a.deletedAt ?? ""),
-  );
+  return readAsUser(async () => {
+    const deleted = { deletedAt: { $ne: null } };
+    const [lookups, transactions, transfers] = await Promise.all([
+      loadLookups(),
+      // Qarz bilan birga o'chirilgan yozuvlar savatchada ko'rsatilmaydi — ular qarzning bir qismi
+      findTransactions({ ...deleted, debtId: null }, 300, { deletedAt: -1 }),
+      findTransfers(deleted, 300, { deletedAt: -1 }),
+    ]);
+    return [...transactions.map((t) => toTxEntry(t, lookups)), ...transfers.map((t) => toTransferEntry(t, lookups))].sort(
+      (a, b) => (b.deletedAt ?? "").localeCompare(a.deletedAt ?? ""),
+    );
+  });
 }
 
 export type RecurringItem = Awaited<ReturnType<typeof getRecurringPage>>["items"][number];
 
 export async function getRecurringPage() {
-  await requireUser();
-  await connectDB();
-  await generateDueRecurring();
-  const [lookups, items] = await Promise.all([
-    loadLookups(),
-    Recurring.find().sort({ active: -1, dayOfMonth: 1, createdAt: 1 }).lean(),
-  ]);
-  const { rates } = lookups;
-  return {
-    options: selectableOptions(lookups.categories, lookups.wallets, lookups.rates),
-    items: items.map((r) => {
-      const wallet = lookups.wallet(r.walletId);
-      return {
-        id: String(r._id),
-        name: r.name,
-        type: r.type,
-        /** Hamyon valyutasida (eng kichik birlikda); amountUzs — bugungi kurs bilan */
-        amount: r.amount,
-        amountUzs: minorToUzs(r.amount, wallet.currency, rates[wallet.currency]),
-        categoryId: String(r.categoryId),
-        category: lookups.category(r.categoryId),
-        walletId: String(r.walletId),
-        wallet,
-        dayOfMonth: r.dayOfMonth,
-        note: r.note,
-        active: r.active,
-        nextDate: r.active ? nextRecurringDate(r).toISOString() : null,
-      };
-    }),
-  };
+  return readAsUser(async () => {
+    const [lookups, items] = await Promise.all([
+      loadLookups(),
+      Recurring.find().sort({ active: -1, dayOfMonth: 1, createdAt: 1 }).lean(),
+    ]);
+    const { rates } = lookups;
+    return {
+      options: selectableOptions(lookups.categories, lookups.wallets, lookups.rates),
+      items: items.map((r) => {
+        const wallet = lookups.wallet(r.walletId);
+        return {
+          id: String(r._id),
+          name: r.name,
+          type: r.type,
+          /** Hamyon valyutasida (eng kichik birlikda); amountUzs — bugungi kurs bilan */
+          amount: r.amount,
+          amountUzs: minorToUzs(r.amount, wallet.currency, rates[wallet.currency]),
+          categoryId: String(r.categoryId),
+          category: lookups.category(r.categoryId),
+          walletId: String(r.walletId),
+          wallet,
+          dayOfMonth: r.dayOfMonth,
+          note: r.note,
+          active: r.active,
+          nextDate: r.active ? nextRecurringDate(r).toISOString() : null,
+        };
+      }),
+    };
+  });
 }

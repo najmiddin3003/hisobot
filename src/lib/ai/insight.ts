@@ -12,18 +12,24 @@ const TREND_MONTHS = 6;
 
 /** Dashboard uchun: oyning saqlangan tahlili va undan keyin nechta yozuv qo'shilgan/o'zgargani (seans tekshirilgan) */
 export async function loadInsight(month: string) {
-  const saved = await AiInsight.findOne({ month }).lean();
   const { start, end } = monthRange(month);
-  const changedSince = saved
-    ? await Transaction.countDocuments({
-        occurredAt: { $gte: start, $lt: end },
-        updatedAt: { $gt: saved.generatedAt },
-      })
-    : 0;
+  // Tahlil va undan keyin o'zgargan yozuvlar soni — bitta so'rovda
+  const [saved] = await AiInsight.aggregate<{ data: unknown; generatedAt: Date; changed: { n: number }[] }>([
+    { $match: { month } },
+    { $limit: 1 },
+    {
+      $lookup: {
+        from: Transaction.collection.name,
+        let: { at: "$generatedAt" },
+        pipeline: [{ $match: { occurredAt: { $gte: start, $lt: end }, $expr: { $gt: ["$updatedAt", "$$at"] } } }, { $count: "n" }],
+        as: "changed",
+      },
+    },
+  ]);
   return {
     configured: aiConfigured(),
     insight: saved ? ({ data: saved.data as Insight, generatedAt: saved.generatedAt.toISOString() } satisfies SavedInsight) : null,
-    changedSince,
+    changedSince: saved?.changed[0]?.n ?? 0,
   };
 }
 

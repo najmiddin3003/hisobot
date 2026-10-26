@@ -4,7 +4,7 @@ import { io } from "next/cache";
 import type { Types } from "mongoose";
 import { connectDB } from "@/lib/db";
 import type { RevokeReason } from "@/lib/domain";
-import { Session, User } from "@/lib/models";
+import { Session, User, type SessionDoc } from "@/lib/models";
 import { PENDING_COOKIE, PENDING_TTL_MS, SESSION_COOKIE, SESSION_TTL_MS, type LoginReason } from "./constants";
 import { hashToken, randomToken } from "./crypto";
 
@@ -115,12 +115,17 @@ export async function readWebSession(): Promise<WebSessionResult> {
 
   await io();
   await connectDB();
-  const session = await Session.findOne({ tokenHash: hashToken(token), channel: "web", status: "active" }).lean();
+  // Seans va foydalanuvchi bitta so'rovda — har bir sahifa bazaga bir marta kamroq boradi
+  const [session] = await Session.aggregate<SessionDoc & { _id: Types.ObjectId; user: { _id: Types.ObjectId; username: string }[] }>([
+    { $match: { tokenHash: hashToken(token), channel: "web", status: "active" } },
+    { $limit: 1 },
+    { $lookup: { from: User.collection.name, localField: "userId", foreignField: "_id", as: "user", pipeline: [{ $project: { username: 1 } }] } },
+  ]);
   if (!session) return { status: "invalid", reason: null };
   if (session.revokedAt) return { status: "invalid", reason: reasonFor(session.revokeReason) };
   if (session.expiresAt <= new Date()) return { status: "invalid", reason: "muddat" };
 
-  const user = await User.findById(session.userId, { username: 1 }).lean();
+  const user = session.user[0];
   if (!user) return { status: "invalid", reason: null };
 
   return {

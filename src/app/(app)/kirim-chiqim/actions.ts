@@ -10,7 +10,7 @@ import { connectDB } from "@/lib/db";
 import { TX_TYPES } from "@/lib/domain";
 import { Category, Recurring, Transaction, Transfer, Wallet } from "@/lib/models";
 import { getRates, rateFor, transactionAmounts } from "@/lib/rates";
-import { initialLastGeneratedMonth } from "@/lib/recurring";
+import { initialLastGeneratedMonth, invalidateRecurringSchedule } from "@/lib/recurring";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
@@ -238,6 +238,7 @@ export async function saveRecurring(input: unknown): Promise<ActionResult> {
   } else {
     await Recurring.create({ ...data, active: true, lastGeneratedMonth: initialLastGeneratedMonth(data.dayOfMonth) });
   }
+  invalidateRecurringSchedule();
   refresh();
   return { ok: true };
 }
@@ -260,6 +261,7 @@ export async function setRecurringActive(input: unknown): Promise<ActionResult> 
     item.lastGeneratedMonth = last && last > initial ? last : initial;
   }
   await item.save();
+  invalidateRecurringSchedule();
   refresh();
   return { ok: true };
 }
@@ -272,6 +274,7 @@ export async function deleteRecurring(input: unknown): Promise<ActionResult> {
 
   await connectDB();
   await Recurring.deleteOne({ _id: parsed.data.id });
+  invalidateRecurringSchedule();
   refresh();
   return { ok: true };
 }

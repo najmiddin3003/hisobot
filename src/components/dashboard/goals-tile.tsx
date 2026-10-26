@@ -10,8 +10,8 @@ import { cn } from "@/lib/utils";
 const SHOWN = 3;
 
 /** Dashboard: jamg'arma maqsadlari — idishlar yonma-yon (ko'pi bilan 3 ta) */
-export async function GoalsTile({ className }: { className?: string }) {
-  const goals = await getGoals();
+export async function GoalsTile({ goals: pending, className }: { goals?: ReturnType<typeof getGoals>; className?: string }) {
+  const goals = await (pending ?? getGoals());
   const shown = goals.slice(0, SHOWN);
 
   return (

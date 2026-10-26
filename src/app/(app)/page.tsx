@@ -14,7 +14,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Skeleton } from "@/components/ui/skeleton";
 import { getMonthInsight } from "@/lib/data/ai";
 import { getDashboard } from "@/lib/data/dashboard";
+import { getGoals } from "@/lib/data/goals";
 import { getRecentEntries } from "@/lib/data/entries";
+import { resolveMonthParam } from "@/lib/dates";
 import { formatMoney } from "@/lib/money";
 
 export const metadata: Metadata = { title: "Dashboard" };
@@ -47,6 +49,12 @@ export default function DashboardPage({ searchParams }: PageProps<"/">) {
 
 async function DashboardContent({ searchParams }: Pick<PageProps<"/">, "searchParams">) {
   const { oy } = await searchParams;
+  // Maqsadlar va AI tahlili asosiy ma'lumotni kutmaydi — hammasi bir vaqtda boshlanadi
+  const insight = getMonthInsight(resolveMonthParam(oy));
+  const goals = getGoals();
+  // Asosiy ma'lumot xato bersa (masalan, seans tugagan) — bu va'dalar "ushlanmagan xato" bo'lib qolmasin
+  insight.catch(() => {});
+  goals.catch(() => {});
   const data = await getDashboard(oy);
 
   return (
@@ -57,7 +65,7 @@ async function DashboardContent({ searchParams }: Pick<PageProps<"/">, "searchPa
 
       <CategoryBreakdown data={data} className="md:col-span-2" />
       <Suspense fallback={<Skeleton className="h-96 rounded-2xl md:col-span-2" />}>
-        <AiInsightSection month={data.month} monthLabel={data.monthLabel} />
+        <AiInsightSection insight={insight} month={data.month} monthLabel={data.monthLabel} />
       </Suspense>
 
       <Card className="md:col-span-2">
@@ -82,15 +90,23 @@ async function DashboardContent({ searchParams }: Pick<PageProps<"/">, "searchPa
       </Card>
 
       <Suspense fallback={<Skeleton className="h-72 rounded-2xl md:col-span-2" />}>
-        <GoalsTile className="md:col-span-2" />
+        <GoalsTile goals={goals} className="md:col-span-2" />
       </Suspense>
       <TopExpenses data={data} className="md:col-span-2" />
     </>
   );
 }
 
-async function AiInsightSection({ month, monthLabel }: { month: string; monthLabel: string }) {
-  const { configured, insight, changedSince } = await getMonthInsight(month);
+async function AiInsightSection({
+  insight: pending,
+  month,
+  monthLabel,
+}: {
+  insight: ReturnType<typeof getMonthInsight>;
+  month: string;
+  monthLabel: string;
+}) {
+  const { configured, insight, changedSince } = await pending;
   return (
     // Oy almashganda kartochka holati yangidan boshlanadi
     <AiInsightCard

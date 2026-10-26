@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useEffectEvent, useRef, useState, useTransition } from "react";
+import dynamic from "next/dynamic";
 import {
   AlertCircle,
   ArrowUp,
@@ -24,9 +25,13 @@ import { deleteChat, getAssistantState } from "@/lib/ai/actions";
 import { MAX_MESSAGE_LENGTH, QUICK_PROMPTS, type ChatSummary } from "@/lib/ai/shared";
 import { dayKey, formatDayHeading, formatTime } from "@/lib/dates";
 import { cn } from "@/lib/utils";
-import { Markdown } from "./markdown";
 import { OPEN_ASSISTANT_EVENT, type OpenAssistantDetail } from "./open-assistant";
 import { useAssistantChat, type UiTurn } from "./use-assistant-chat";
+
+// Markdown kutubxonasi og'ir (~50 KB) — faqat birinchi AI javobi chiqqanda yuklanadi
+const Markdown = dynamic(() => import("./markdown").then((mod) => mod.Markdown), {
+  loading: () => null,
+});
 
 /** "Bugun, 14:35" yoki "20 oktabr, seshanba, 14:35" */
 function formatWhen(iso: string) {

@@ -1,10 +1,9 @@
 import "server-only";
 import type { Types } from "mongoose";
-import { requireUser } from "@/lib/auth/dal";
+import { readAsUser } from "@/lib/auth/dal";
 import { totalBalance } from "@/lib/balances";
 import { loadDebtOverview } from "@/lib/data/debts";
 import { loadTopExpenses } from "@/lib/data/entries";
-import { connectDB } from "@/lib/db";
 import {
   MONTH_NAMES,
   currentMonthKey,
@@ -17,7 +16,6 @@ import {
 } from "@/lib/dates";
 import { Category, Transaction } from "@/lib/models";
 import { percentChange } from "@/lib/money";
-import { generateDueRecurring } from "@/lib/recurring";
 
 const TASHKENT_TZ = "+05:00";
 const TREND_MONTHS = 12;
@@ -38,11 +36,10 @@ async function netSince(date: Date) {
 
 /** Dashboard: tanlangan oy ko'rsatkichlari, o'tgan oy bilan taqqoslash, kategoriyalar, trend va qarzlar */
 export async function getDashboard(monthParam: unknown) {
-  await requireUser();
-  await connectDB();
-  await generateDueRecurring();
+  return readAsUser(() => loadDashboard(monthParam));
+}
 
-  // Oy seans tekshiruvidan keyin aniqlanadi — joriy vaqt faqat so'rov paytida o'qiladi
+async function loadDashboard(monthParam: unknown) {
   const now = new Date();
   const month = resolveMonthParam(monthParam, now);
   const isCurrentMonth = month === currentMonthKey(now);

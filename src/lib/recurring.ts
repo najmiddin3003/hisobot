@@ -3,6 +3,7 @@ import {
   currentMonthKey,
   daysInMonth,
   monthParts,
+  monthRange,
   shiftMonth,
   tashkentDate,
   tashkentToday,
@@ -40,11 +41,16 @@ export function nextRecurringDate(item: { dayOfMonth: number; lastGeneratedMonth
 export async function generateDueRecurring(now = new Date()) {
   const current = currentMonthKey(now);
   const today = tashkentToday(now).day;
+  // Keyingi tekshiruv qachon kerak: eng kechi — kelasi oy boshi
+  let nextDueAt = monthRange(shiftMonth(current, 1)).start.getTime();
   const items = await Recurring.find({
     active: true,
     $or: [{ lastGeneratedMonth: null }, { lastGeneratedMonth: { $lt: current } }],
   }).lean();
-  if (items.length === 0) return 0;
+  if (items.length === 0) {
+    schedule = { checkedAt: now.getTime(), nextDueAt };
+    return 0;
+  }
 
   // Takroriy to'lov summasi hamyon valyutasida — so'mga yozilgan paytdagi kurs bilan aylantiriladi
   const [wallets, { rates }] = await Promise.all([
@@ -56,13 +62,21 @@ export async function generateDueRecurring(now = new Date()) {
   for (const item of items) {
     const currency = currencyOf(wallets.find((w) => w._id.equals(item.walletId)));
     // Kurs hali olinmagan bo'lsa — keyingi safar (kurs kelganda) yoziladi
-    if (!rates[currency]) continue;
+    if (!rates[currency]) {
+      nextDueAt = now.getTime();
+      continue;
+    }
     let last = item.lastGeneratedMonth;
     for (let i = 0; i < 12; i++) {
       const month = shiftMonth(last ?? shiftMonth(current, -1), 1);
       if (month > current) break;
       const day = dueDay(item.dayOfMonth, month);
-      if (month === current && today < day) break;
+      const { year, month: m } = monthParts(month);
+      if (month === current && today < day) {
+        // To'lov kuni boshlanishi bilan (Toshkent vaqti) yana tekshiriladi
+        nextDueAt = Math.min(nextDueAt, tashkentDate(year, m, day).getTime());
+        break;
+      }
 
       const claim = await Recurring.updateOne(
         { _id: item._id, active: true, lastGeneratedMonth: last },
@@ -70,7 +84,6 @@ export async function generateDueRecurring(now = new Date()) {
       );
       if (claim.modifiedCount !== 1) break; // boshqa so'rov allaqachon yozgan
 
-      const { year, month: m } = monthParts(month);
       const date = tashkentDate(year, m, day, 9);
       const occurredAt = date > now ? now : date;
       await Transaction.create({
@@ -89,5 +102,27 @@ export async function generateDueRecurring(now = new Date()) {
   }
   // Telegram'da xabar beriladi (bot sozlangan bo'lsa)
   notifyRecurringAdded(created);
+  schedule = { checkedAt: now.getTime(), nextDueAt };
   return created.length;
+}
+
+// Shu server nusxasi xotirasida: keyingi takroriy to'lov qachon vaqti keladi. Undan oldin sahifalar bazaga bormaydi.
+// Boshqa nusxada o'zgargan bo'lishi mumkinligi uchun baribir har 10 daqiqada qayta tekshiriladi.
+const SCHEDULE_TTL_MS = 10 * 60 * 1000;
+let schedule: { checkedAt: number; nextDueAt: number } | null = null;
+let pending: Promise<number> | null = null;
+
+/** Takroriy to'lov qo'shilsa/o'zgarsa/yoqilsa — keyingi sahifa ochilishida darhol tekshirilsin */
+export function invalidateRecurringSchedule() {
+  schedule = null;
+}
+
+/** Sahifalar uchun: faqat biror to'lov vaqti kelgan bo'lishi mumkin bo'lsa bazaga boradi (bir vaqtdagi chaqiruvlar birlashadi) */
+export async function ensureDueRecurring() {
+  const now = Date.now();
+  if (schedule && now < schedule.nextDueAt && now - schedule.checkedAt < SCHEDULE_TTL_MS) return 0;
+  pending ??= generateDueRecurring().finally(() => {
+    pending = null;
+  });
+  return pending;
 }

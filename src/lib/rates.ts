@@ -1,4 +1,5 @@
 import "server-only";
+import { after } from "next/server";
 import { CURRENCIES, minorToUzs, type Currency, type Rates } from "@/lib/currency";
 import { dayKey } from "@/lib/dates";
 import { Rate } from "@/lib/models";
@@ -9,7 +10,7 @@ import { Rate } from "@/lib/models";
 
 const FIAT_TTL_MS = 6 * 60 * 60 * 1000;
 const CRYPTO_TTL_MS = 15 * 60 * 1000;
-const MEMORY_TTL_MS = 60 * 1000;
+const MEMORY_TTL_MS = 5 * 60 * 1000;
 const FETCH_TIMEOUT_MS = 6000;
 
 const FOREIGN = CURRENCIES.filter((c) => c !== "UZS") as Exclude<Currency, "UZS">[];
@@ -58,8 +59,11 @@ async function fetchCryptoUsd(): Promise<{ BTC?: number; USDT?: number; source: 
 
 let memory: { at: number; snapshot: RatesSnapshot } | null = null;
 let inflight: Promise<RatesSnapshot> | null = null;
+let refreshing = false;
 
-async function loadLatest() {
+type Latest = Map<Currency, { rate: number; source: string; fetchedAt: Date }>;
+
+async function loadLatest(): Promise<Latest> {
   const rows = await Rate.aggregate<{ _id: Currency; rate: number; source: string; fetchedAt: Date }>([
     { $sort: { fetchedAt: -1 } },
     { $group: { _id: "$currency", rate: { $first: "$rate" }, source: { $first: "$source" }, fetchedAt: { $first: "$fetchedAt" } } },
@@ -67,13 +71,32 @@ async function loadLatest() {
   return new Map(rows.map((r) => [r._id, r]));
 }
 
-async function refresh(force: boolean): Promise<RatesSnapshot> {
+function isStale(latest: Latest, currency: Currency, now: number, force: boolean) {
+  const row = latest.get(currency);
+  return force || !row || now - row.fetchedAt.getTime() > (CRYPTO.has(currency) ? CRYPTO_TTL_MS : FIAT_TTL_MS);
+}
+
+function snapshotOf(latest: Latest): RatesSnapshot {
+  const rates = { UZS: 1 } as Rates;
+  const info: RatesSnapshot["info"] = {};
+  const missing: Currency[] = [];
+  for (const c of FOREIGN) {
+    const value = latest.get(c);
+    if (value) {
+      rates[c] = value.rate;
+      info[c] = { rate: value.rate, source: value.source, fetchedAt: value.fetchedAt.toISOString() };
+    } else {
+      rates[c] = 0;
+      missing.push(c);
+    }
+  }
+  return { rates, info, missing };
+}
+
+/** Eskirgan kurslarni manbadan oladi va bazaga yozadi */
+async function refreshFromSources(latest: Latest, force: boolean): Promise<RatesSnapshot> {
   const now = Date.now();
-  const latest = await loadLatest();
-  const stale = (c: Currency) => {
-    const row = latest.get(c);
-    return force || !row || now - row.fetchedAt.getTime() > (CRYPTO.has(c) ? CRYPTO_TTL_MS : FIAT_TTL_MS);
-  };
+  const stale = (c: Currency) => isStale(latest, c, now, force);
 
   const fetched: Fetched = {};
   if (stale("USD") || stale("EUR")) {
@@ -108,32 +131,55 @@ async function refresh(force: boolean): Promise<RatesSnapshot> {
     ),
   );
 
-  const rates = { UZS: 1 } as Rates;
-  const info: RatesSnapshot["info"] = {};
-  const missing: Currency[] = [];
+  const merged: Latest = new Map(latest);
   for (const c of FOREIGN) {
     const fresh = fetched[c];
-    const row = latest.get(c);
-    const value = fresh ? { rate: fresh.rate, source: fresh.source, fetchedAt } : row;
-    if (value) {
-      rates[c] = value.rate;
-      info[c] = { rate: value.rate, source: value.source, fetchedAt: value.fetchedAt.toISOString() };
-    } else {
-      rates[c] = 0;
-      missing.push(c);
-    }
+    if (fresh) merged.set(c, { ...fresh, fetchedAt });
   }
-  return { rates, info, missing };
+  return snapshotOf(merged);
+}
+
+/** Javob yuborilgandan keyin bajariladi (Next so'rovi bo'lmasa — shunchaki fonda) */
+function inBackground(task: () => Promise<unknown>) {
+  const run = () => task().catch((error) => console.error("Kurslarni fonda yangilab bo'lmadi:", error));
+  try {
+    after(run);
+  } catch {
+    void run();
+  }
+}
+
+async function load(force: boolean): Promise<RatesSnapshot> {
+  const latest = await loadLatest();
+  const now = Date.now();
+  const snapshot = snapshotOf(latest);
+  if (!FOREIGN.some((c) => isStale(latest, c, now, force))) return snapshot;
+
+  // Hamma kurs ma'lum, faqat eskirgan — sahifa tashqi manbani kutmaydi, yangilash fonda
+  if (!force && snapshot.missing.length === 0) {
+    if (!refreshing) {
+      refreshing = true;
+      inBackground(async () => {
+        try {
+          memory = { at: Date.now(), snapshot: await refreshFromSources(latest, false) };
+        } finally {
+          refreshing = false;
+        }
+      });
+    }
+    return snapshot;
+  }
+  return refreshFromSources(latest, force);
 }
 
 /**
- * Joriy kurslar (1 birlik necha so'm). Bazadagi oxirgi qiymat ishlatiladi; eskirgan bo'lsa
- * manbadan yangilanadi. Manba ishlamasa — oxirgi ma'lum kurs bilan davom etadi.
- * connectDB() chaqiruvchi tomonda bo'lishi kerak.
+ * Joriy kurslar (1 birlik necha so'm). Bazadagi oxirgi qiymat darhol ishlatiladi; eskirgan bo'lsa
+ * manbadan fonda yangilanadi (kurs umuman yo'q bo'lsa yoki force — kutib olinadi).
+ * Manba ishlamasa — oxirgi ma'lum kurs bilan davom etadi. connectDB() chaqiruvchi tomonda bo'lishi kerak.
  */
 export async function getRates(options: { force?: boolean } = {}): Promise<RatesSnapshot> {
   if (!options.force && memory && Date.now() - memory.at < MEMORY_TTL_MS) return memory.snapshot;
-  inflight ??= refresh(Boolean(options.force)).finally(() => {
+  inflight ??= load(Boolean(options.force)).finally(() => {
     inflight = null;
   });
   const snapshot = await inflight;

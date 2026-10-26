@@ -6,22 +6,24 @@ import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import "./globals.css";
 
+// Faqat "latin" to'plami: o'zbekcha ʻ (U+02BB) ham shu yerda — latin-ext keraksiz yuklanmasin
 const geistSans = Geist({
   variable: "--font-sans",
-  subsets: ["latin", "latin-ext"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
   subsets: ["latin"],
 });
 
-// Sarlavhalar va katta raqamlar; opsz — katta o'lchamda nozikroq, kichikda mustahkamroq shakl
+// Kamdan-kam ishlatiladi (kalit, kod) — oldindan yuklanmaydi
+const geistMono = Geist_Mono({
+  variable: "--font-geist-mono",
+  subsets: ["latin"],
+  preload: false,
+});
+
+// Sarlavhalar va katta raqamlar; opsz — katta o'lchamda nozikroq, kichikda mustahkamroq shakl. Kursiv ishlatilmaydi.
 const fraunces = Fraunces({
   variable: "--font-fraunces",
-  subsets: ["latin", "latin-ext"],
+  subsets: ["latin"],
   axes: ["opsz"],
-  style: ["normal", "italic"],
 });
 
 // viewportFit — telefonda pastki panel ekran chetidagi xavfsiz hududni hisobga olishi uchun
