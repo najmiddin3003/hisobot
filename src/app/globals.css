@@ -414,6 +414,123 @@
   animation: robot-z 2.4s ease-out infinite;
 }
 
+/* Oydin hissiyotlari: yurak urishi, oyoq silkitish, bosh irg'ash, ko'z yoshi, uchuvchi yurakchalar, gapirish */
+@keyframes robot-beat {
+  0%,
+  30%,
+  100% {
+    transform: scale(1);
+  }
+  15% {
+    transform: scale(1.2);
+  }
+}
+@keyframes robot-kick {
+  0%,
+  100% {
+    transform: rotate(-10deg);
+  }
+  50% {
+    transform: rotate(10deg);
+  }
+}
+@keyframes robot-nod {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  20%,
+  60% {
+    transform: translateY(3px);
+  }
+  40%,
+  80% {
+    transform: translateY(-1px);
+  }
+}
+@keyframes robot-tear {
+  0% {
+    opacity: 0;
+    transform: translateY(-2px);
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(9px);
+  }
+}
+@keyframes robot-float-heart {
+  0% {
+    opacity: 0;
+    transform: translateY(4px) scale(0.6);
+  }
+  25% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-14px) scale(1);
+  }
+}
+@keyframes robot-twinkle {
+  0%,
+  100% {
+    opacity: 0.2;
+    transform: scale(0.5) rotate(0);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1) rotate(45deg);
+  }
+}
+@keyframes robot-talk {
+  0%,
+  49% {
+    opacity: 1;
+  }
+  50%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@utility robot-beat {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: robot-beat 2.4s infinite;
+}
+@utility robot-kick-l {
+  animation: robot-kick 0.9s ease-in-out infinite;
+}
+@utility robot-kick-r {
+  animation: robot-kick 0.9s ease-in-out infinite reverse;
+}
+@utility robot-nod {
+  animation: robot-nod 1.1s ease-in-out 2;
+}
+@utility robot-tear {
+  animation: robot-tear 1.8s ease-in infinite;
+}
+@utility robot-float-heart {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: robot-float-heart 2.2s ease-out infinite;
+}
+@utility robot-twinkle {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: robot-twinkle 1.4s ease-in-out infinite;
+}
+@utility robot-talk-a {
+  animation: robot-talk 0.42s linear infinite;
+}
+@utility robot-talk-b {
+  animation: robot-talk 0.42s linear infinite;
+  animation-delay: -0.21s;
+}
+
 /* Qurilmada "harakatni kamaytirish" yoqilgan bo'lsa — hammasi darhol */
 @media (prefers-reduced-motion: reduce) {
   *,
@@ -429,8 +546,19 @@
   .robot-blink,
   .robot-wave,
   .robot-glow,
-  .robot-z {
+  .robot-z,
+  .robot-beat,
+  .robot-kick-l,
+  .robot-kick-r,
+  .robot-nod,
+  .robot-tear,
+  .robot-float-heart,
+  .robot-twinkle,
+  .robot-talk-a {
     animation: none !important;
+  }
+  .robot-talk-b {
+    display: none;
   }
 }
 

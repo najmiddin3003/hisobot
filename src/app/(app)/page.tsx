@@ -16,7 +16,6 @@ import { getMonthInsight } from "@/lib/data/ai";
 import { getDashboard } from "@/lib/data/dashboard";
 import { getGoals } from "@/lib/data/goals";
 import { getRecentEntries } from "@/lib/data/entries";
-import { resolveMonthParam } from "@/lib/dates";
 import { formatMoney } from "@/lib/money";
 
 export const metadata: Metadata = { title: "Dashboard" };
@@ -50,7 +49,7 @@ export default function DashboardPage({ searchParams }: PageProps<"/">) {
 async function DashboardContent({ searchParams }: Pick<PageProps<"/">, "searchParams">) {
   const { oy } = await searchParams;
   // Maqsadlar va AI tahlili asosiy ma'lumotni kutmaydi — hammasi bir vaqtda boshlanadi
-  const insight = getMonthInsight(resolveMonthParam(oy));
+  const insight = getMonthInsight(oy);
   const goals = getGoals();
   // Asosiy ma'lumot xato bersa (masalan, seans tugagan) — bu va'dalar "ushlanmagan xato" bo'lib qolmasin
   insight.catch(() => {});

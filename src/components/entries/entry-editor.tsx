@@ -13,6 +13,7 @@ import {
 } from "@/app/(app)/kirim-chiqim/actions";
 import { AmountInput } from "@/components/entries/amount-input";
 import { ActivePill } from "@/components/motion/active-pill";
+import { notifyRobot } from "@/components/robot/events";
 import { CategoryPicker, WalletPicker } from "@/components/entries/option-pickers";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -243,6 +244,8 @@ function EntryForm({ payload, options, onDone }: { payload: Payload; options: En
       }
       rememberWallet(kind === "otkazma" ? fromWalletId : walletId);
       toast.success(editing ? "Saqlandi" : `${KIND_META[kind].label} qo'shildi`);
+      // Oydin ham xabardor bo'lsin (kirimga quvonadi, katta xarajatga xavotirlanadi)
+      notifyRobot({ type: "entry", kind, editing: Boolean(editing), big: minorToUzs(amount, amountCurrency, txRate) >= 1_000_000 });
       onDone();
     });
   };

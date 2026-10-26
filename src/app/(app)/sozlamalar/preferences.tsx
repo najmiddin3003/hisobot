@@ -75,10 +75,12 @@ export function RobotToggle() {
 
   return (
     <label className="flex cursor-pointer items-center gap-3 rounded-xl border p-3 transition-colors hover:bg-accent/50">
-      <Oydin className="h-12 w-auto shrink-0" eyes={mounted && !enabled ? "closed" : "happy"} thrust={mounted && !enabled ? 0 : 1} />
+      <Oydin className="h-14 w-auto shrink-0" mood={mounted && !enabled ? "sleepy" : "love"} thrust={mounted && !enabled ? 0 : 1} />
       <span className="min-w-0 flex-1 space-y-0.5">
-        <span className="block text-sm font-medium">Oydin robotcha</span>
-        <span className="block text-xs text-muted-foreground">Sayt bo&apos;ylab uchib yuradi, bosilsa AI yordamchini ochadi</span>
+        <span className="block text-sm font-medium">Oydin — yordamchi qizing</span>
+        <span className="block text-xs text-muted-foreground">
+          Ekran bo&apos;ylab uchib yuradi, sudrab xohlagan joyga qo&apos;yish mumkin. Bosilsa — u bilan chat ochiladi
+        </span>
       </span>
       <Switch
         checked={mounted ? enabled : true}

@@ -11,3 +11,4 @@ export { AiChat, type AiChatDoc } from "./ai-chat";
 export { AiInsight, type AiInsightDoc } from "./ai-insight";
 export { Rate, type RateDoc } from "./rate";
 export { Goal, type GoalDoc } from "./goal";
+export { CompanionCache, type CompanionCacheDoc } from "./companion-cache";

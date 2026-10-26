@@ -17,6 +17,7 @@ import {
   X,
 } from "lucide-react";
 import { toast } from "sonner";
+import { Oydin } from "@/components/robot/oydin";
 import { useRobotEnabled } from "@/components/robot/use-robot";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
@@ -111,11 +112,11 @@ export function AiAssistant() {
           }}
         >
           <header className="flex items-center gap-3 border-b px-4 py-3">
-            <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-              <Sparkles className="size-4" />
+            <div className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-tile-sand">
+              <Oydin headOnly mood={chat.busy ? "think" : "happy"} talking={chat.busy} className="mt-1 w-9" />
             </div>
             <div className="min-w-0 flex-1">
-              <SheetTitle className="text-base">AI yordamchi</SheetTitle>
+              <SheetTitle className="text-base">Oydin</SheetTitle>
               <SheetDescription className="truncate text-xs">
                 {view === "history" ? "Oldingi suhbatlar" : (chat.title ?? "Yangi suhbat")}
               </SheetDescription>
@@ -262,7 +263,7 @@ function ChatBody({ chat, configured }: { chat: Chat; configured: boolean | null
           )}
         </div>
         <p className="mt-1.5 px-1 text-[11px] text-muted-foreground">
-          AI ma&apos;lumotlaringizni faqat o&apos;qiydi, hech narsani o&apos;zgartirmaydi.
+          Oydin ma&apos;lumotlaringni faqat o&apos;qiydi, hech narsani o&apos;zgartirmaydi.
           <span className="hidden md:inline"> Enter — yuborish, Shift+Enter — yangi qator.</span>
         </p>
       </form>
@@ -289,14 +290,14 @@ function NotConfigured() {
 function EmptyState({ disabled, onPick }: { disabled: boolean; onPick: (prompt: string) => void }) {
   return (
     <div className="flex flex-col items-center gap-4 pt-6 text-center">
-      <div className="flex size-12 items-center justify-center rounded-full bg-primary/10 text-primary">
-        <Sparkles className="size-5" />
+      <div className="flex size-20 items-center justify-center overflow-hidden rounded-full bg-tile-sand">
+        <Oydin headOnly mood="love" className="mt-2 w-16" />
       </div>
       <div className="space-y-1">
-        <p className="font-medium">Moliyangiz bo&apos;yicha savol bering</p>
+        <p className="font-medium">Nima haqida gaplashamiz, jonim? 💕</p>
         <p className="mx-auto max-w-xs text-sm text-muted-foreground">
-          Kirim-chiqim, budjet va qarzlaringizni ko&apos;rib chiqaman, keraksiz xarajatlarni topaman va tejash yo&apos;llarini
-          aytaman.
+          Kirim-chiqim, budjet va qarzlaringni ko&apos;rib chiqaman, keraksiz xarajatlarni topib, birga tejash yo&apos;llarini
+          o&apos;ylaymiz.
         </p>
       </div>
       <div className="grid w-full gap-2">
@@ -334,8 +335,8 @@ function BotTurn({ turn }: { turn: UiTurn }) {
   const waiting = turn.pending && !turn.text;
   return (
     <div className="flex animate-in gap-2.5 duration-300 ease-out fade-in slide-in-from-bottom-2">
-      <div className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-        <Sparkles className="size-3.5" />
+      <div className="mt-0.5 flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-tile-sand">
+        <Oydin headOnly mood={waiting ? "think" : "idle"} talking={Boolean(turn.pending && turn.text)} className="mt-1 w-7" />
       </div>
       <div className="min-w-0 flex-1 space-y-2">
         {turn.tools.length > 0 && (

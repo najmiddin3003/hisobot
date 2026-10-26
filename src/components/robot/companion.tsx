@@ -4,240 +4,305 @@ import { useEffect, useEffectEvent, useRef, useState, useSyncExternalStore } fro
 import { usePathname } from "next/navigation";
 import { AnimatePresence, m, useReducedMotion, type Transition } from "motion/react";
 import { openAssistant } from "@/components/ai/open-assistant";
+import type { CompanionLine, CompanionMood } from "@/lib/companion";
 import { SPRING } from "@/lib/motion";
 import { cn } from "@/lib/utils";
-import { getRobotTips } from "./actions";
-import { Oydin, type RobotEyes, type RobotMouth } from "./oydin";
+import { getCompanionLines } from "./actions";
+import { ROBOT_EVENT, type RobotEventDetail } from "./events";
+import { EVERYDAY, REACTIONS, ROUTE_LINES, greeting, pick, shuffle } from "./lines";
+import { Oydin } from "./oydin";
 import { useRobotEnabled } from "./use-robot";
 
-type Pose = { eyes: RobotEyes; mouth: RobotMouth; waving: boolean; thrust: number; sleeping: boolean };
+const EDGE = 8;
+/** SVG nisbati (balandlik / kenglik) — oydin.tsx viewBox */
+const RATIO = 194 / 120;
+/** Shuncha vaqt hech narsa qilinmasa — pastga tushib uxlab qoladi */
+const SLEEP_AFTER = 120_000;
+/** O'z-o'zidan gapirish oralig'i (eng kami) */
+const TALK_EVERY = 35_000;
+/** Foydalanuvchi qo'ygan joyda shuncha turadi, keyin yana aylana boshlaydi */
+const REST_AFTER_DROP = 45_000;
+/** Server gaplari shuncha vaqtda bir yangilanadi */
+const LINES_TTL = 30 * 60_000;
+/** Sahifa shuncha vaqt yashirin turib qaytilsa — "sog'indim" */
+const MISSED_AFTER = 3 * 60_000;
 
-const IDLE: Pose = { eyes: "open", mouth: "smile", waving: false, thrust: 1, sleeping: false };
-const EDGE = 12;
-/** Shuncha vaqt hech narsa qilinmasa — qo'nib uxlab qoladi */
-const SLEEP_AFTER = 90_000;
-/** Gaplar orasidagi eng kam vaqt */
-const TALK_EVERY = 28_000;
-const TIPS_TTL = 2 * 60_000;
-/** Sichqoncha yaqinlashganda shuncha piksel chetga suriladi */
-const DODGE = 96;
+type Pos = { x: number; y: number };
+type Bubble = { id: number; text: string; below: boolean; right: boolean };
+type Bounds = { minX: number; maxX: number; minY: number; maxY: number; vw: number };
 
-const GENERIC = [
-  "Meni bosing, savolingizga javob beraman 💬",
-  "Bugun ham tejaymizmi? 💪",
-  "Kayfiyat zo'rmi? Menimcha zo'r! 😄",
-  "Kichik tejash — katta natija ✨",
-  "Men shu yerdaman, kerak bo'lsam bosing 🙂",
-];
-
-const ROUTE_LINES: Record<string, string[]> = {
-  "/": ["Bugungi holatni birga ko'ramizmi? 📊", "Dashboard bugun ham chiroyli chiqdi!"],
-  "/kirim-chiqim": ["Har bir so'mni yozib boring, men kuzatib turaman 👀", "Yangi yozuv uchun + tugmasini bosing"],
-  "/budjet": ["Maqsad idishlarini to'ldiramizmi? 🫙", "Budjet nazoratda, zo'r!"],
-  "/qarzlar": ["Qarzlarni vaqtida yopsak, uyqu shirin bo'ladi 😌"],
-  "/xaq": ["Sizdan qarzdorlarni ham unutmaymiz 📒"],
-  "/sozlamalar": ["Meni shu yerda o'chirib qo'yish mumkin... lekin qilmang-da 🥺"],
-};
-
-const NEAR = ["Salom! 👋", "Meni bosing, yordam beraman 💬", "Hehe, men shu yerdaman 😄", "Nima qilamiz bugun? ✨"];
-
-const pick = <T,>(list: T[]) => list[Math.floor(Math.random() * list.length)];
 const rand = (min: number, max: number) => min + Math.random() * (max - min);
 const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
-
-function greeting() {
-  const hour = new Date().getHours();
-  if (hour >= 5 && hour < 11) return "Xayrli tong, jigar! ☀️";
-  if (hour >= 11 && hour < 17) return "Salom, jigar! 👋";
-  if (hour >= 17 && hour < 23) return "Xayrli kech, jigar! 🌙";
-  return "Hali uxlamadingizmi, jigar? 🌙";
-}
 
 const noop = () => () => {};
 const subscribeResize = (onChange: () => void) => {
   window.addEventListener("resize", onChange);
   return () => window.removeEventListener("resize", onChange);
 };
-const viewportWidth = () => document.documentElement.clientWidth;
 const isDesktop = () => window.matchMedia("(min-width: 1024px)").matches;
+const viewportKey = () => `${window.innerWidth}x${window.innerHeight}`;
+
+/** Yuradigan hudud: yuqori panel ostidan, telefonda — pastki menyudan yuqorida */
+function readBounds(w: number, h: number): Bounds {
+  const vw = document.documentElement.clientWidth;
+  const vh = window.innerHeight;
+  const header = document.querySelector("header")?.getBoundingClientRect().bottom ?? 0;
+  // Pastki menyu — ekran tagiga yopishgan, ko'rinib turgan nav (kompyuterda yashirin)
+  const nav = [...document.querySelectorAll<HTMLElement>("nav")].find(
+    (el) => el.getClientRects().length > 0 && getComputedStyle(el).position === "fixed" && el.getBoundingClientRect().bottom >= vh - 1,
+  );
+  const navTop = nav ? nav.getBoundingClientRect().top : vh;
+  const minY = Math.max(header, 0) + EDGE;
+  return { minX: EDGE, maxX: Math.max(EDGE, vw - w - EDGE), minY, maxY: Math.max(minY, navTop - h - EDGE), vw };
+}
 
 /**
- * Oydin — sayt bo'ylab (ekranning pastki qismida) uchib yuradigan robotcha.
- * Uchadi, shoshib "yuguradi", salto qiladi, sichqoncha yaqinlashsa salom beradi, uzoq tinchlikda uxlaydi.
- * Bosilsa — AI yordamchi ochiladi. Sozlamalarda o'chirib qo'yish mumkin.
+ * Oydin — ekran bo'ylab uchib yuradigan yordamchi qiz.
+ * Istalgan joyga uchadi, shoshib "yuguradi", salto qiladi; sichqonchani sudrab xohlagan joyga qo'yish mumkin.
+ * Erkalab gapiradi, voqealarga (kirim, katta xarajat...) hissiy javob beradi, uzoq tinchlikda uxlaydi.
+ * Bosilsa — AI yordamchi (u ham Oydin) ochiladi. Sozlamalarda o'chirib qo'yish mumkin.
  */
 export function RobotCompanion() {
   const enabled = useRobotEnabled();
   const mounted = useSyncExternalStore(noop, () => true, () => false);
-  const width = useSyncExternalStore(subscribeResize, viewportWidth, () => 0);
   const desktop = useSyncExternalStore(subscribeResize, isDesktop, () => false);
+  const viewport = useSyncExternalStore(subscribeResize, viewportKey, () => "");
   const reduced = useReducedMotion();
   const pathname = usePathname();
 
-  const size = desktop ? 64 : 48;
-  const maxX = Math.max(width - size - EDGE, EDGE);
-  const maxLift = desktop ? 40 : 20;
+  const w = desktop ? 64 : 52;
+  const h = Math.round(w * RATIO);
 
-  const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
-  const [move, setMove] = useState<Transition>({ duration: 1.2, ease: "easeOut" });
+  const [pos, setPos] = useState<Pos | null>(null);
+  const [move, setMove] = useState<Transition>({ duration: 0 });
   const [lean, setLean] = useState(0);
   const [facing, setFacing] = useState<1 | -1>(-1);
-  const [pose, setPose] = useState<Pose>(IDLE);
+  const [mood, setMood] = useState<CompanionMood>("idle");
+  const [talking, setTalking] = useState(false);
+  const [waving, setWaving] = useState(false);
+  const [thrust, setThrust] = useState(1);
   const [flipKey, setFlipKey] = useState(0);
-  const [bubble, setBubble] = useState<{ id: number; text: string } | null>(null);
+  const [bubble, setBubble] = useState<Bubble | null>(null);
+  const [dragging, setDragging] = useState(false);
 
-  const robotRef = useRef<HTMLDivElement>(null);
-  const timers = useRef<{ bubble?: number; settle?: number }>({});
-  const lastActivity = useRef(0);
-  const lastTalk = useRef(0);
-  const lastNear = useRef(0);
-  const holdUntil = useRef(0);
-  const asleep = useRef(false);
-  const tips = useRef<{ at: number; list: string[] }>({ at: 0, list: [] });
+  const boxRef = useRef<HTMLDivElement>(null);
+  const timers = useRef<Record<string, number>>({});
+  const life = useRef({ lastActivity: 0, lastTalk: 0, lastNear: 0, holdUntil: 0, restUntil: 0, asleep: false, hiddenAt: 0 });
+  const drag = useRef<{ id: number; sx: number; sy: number; ox: number; oy: number; lastX: number; moved: boolean } | null>(null);
+  const justDragged = useRef(false);
+  const pool = useRef<{ lines: CompanionLine[]; queue: CompanionLine[]; at: number }>({ lines: [], queue: [], at: 0 });
 
-  const x = pos ? clamp(pos.x, EDGE, maxX) : maxX;
-  const y = pos?.y ?? 0;
-
-  const say = (text: string, ms = 4200) => {
-    window.clearTimeout(timers.current.bubble);
-    setBubble({ id: Date.now(), text });
-    lastTalk.current = Date.now();
-    timers.current.bubble = window.setTimeout(() => setBubble(null), ms);
+  const later = (name: string, ms: number, fn: () => void) => {
+    window.clearTimeout(timers.current[name]);
+    timers.current[name] = window.setTimeout(fn, ms);
   };
 
-  /** Harakat tugagach — tik turib, odatiy holatga qaytadi */
-  const settle = (afterMs: number, next: Partial<Pose> = {}) => {
-    window.clearTimeout(timers.current.settle);
-    timers.current.settle = window.setTimeout(() => {
-      setLean(0);
-      setPose((p) => (p.sleeping ? p : { ...IDLE, ...next }));
-    }, afterMs);
+  /** Hozirgi (animatsiya o'rtasidagi bo'lsa ham) haqiqiy joy */
+  const currentPos = (): Pos | null => {
+    const rect = boxRef.current?.getBoundingClientRect();
+    return rect ? { x: rect.left, y: rect.top } : pos;
   };
 
-  const flyTo = (targetX: number, targetY: number, fast: boolean) => {
-    const distance = Math.abs(targetX - x);
-    const duration = fast ? clamp(distance / 520, 0.45, 1.2) : clamp(distance / 150, 1.1, 4.5);
-    const dir = targetX >= x ? 1 : -1;
+  const say = (line: CompanionLine, ms = 4800) => {
+    const at = currentPos() ?? { x: 0, y: 0 };
+    const b = readBounds(w, h);
+    setBubble({ id: Date.now(), text: line.text, below: at.y < b.minY + 70, right: at.x + w / 2 > b.vw / 2 });
+    life.current.lastTalk = Date.now();
+    setMood(line.mood);
+    setTalking(!reduced);
+    later("talk", Math.min(2600, 700 + line.text.length * 30), () => setTalking(false));
+    later("bubble", ms, () => setBubble(null));
+    later("mood", ms + 300, () => {
+      if (!life.current.asleep && !drag.current) setMood("idle");
+    });
+  };
+
+  const wave = (ms = 2400) => {
+    setWaving(true);
+    later("wave", ms, () => setWaving(false));
+  };
+
+  const flyTo = (target: Pos, fast: boolean) => {
+    const from = currentPos() ?? target;
+    const distance = Math.hypot(target.x - from.x, target.y - from.y);
+    const duration = fast ? clamp(distance / 650, 0.45, 1.3) : clamp(distance / 170, 1.2, 5);
+    const dir = target.x >= from.x ? 1 : -1;
     setFacing(dir);
     setMove({ duration, ease: fast ? [0.7, 0, 0.2, 1] : "easeInOut" });
-    setPos({ x: targetX, y: targetY });
-    setLean(dir * (fast ? 16 : 7));
-    setPose({ ...IDLE, eyes: fast ? "wow" : "happy", mouth: fast ? "open" : "smile", thrust: fast ? 2 : 1.4 });
-    settle(duration * 1000);
+    setPos(target);
+    setLean(dir * (fast ? 14 : 6));
+    setThrust(fast ? 2 : 1.4);
+    later("settle", duration * 1000, () => {
+      setLean(0);
+      setThrust(1);
+    });
     return duration * 1000;
   };
 
-  const wave = (text: string) => {
-    setFacing(x + size / 2 < width / 2 ? 1 : -1);
-    setLean(0);
-    setPose({ ...IDLE, eyes: "happy", mouth: "open", waving: true });
-    say(text);
-    settle(2600);
+  /** Ko'pincha ekran chetlariga yaqin (kontentni kamroq to'sadi), ba'zan istalgan joyga */
+  const pickTarget = (b: Bounds): Pos => {
+    const from = currentPos() ?? { x: b.maxX, y: b.maxY };
+    const spanX = b.maxX - b.minX;
+    let target = from;
+    for (let i = 0; i < 6; i++) {
+      const nearEdge = Math.random() < 0.6;
+      const x = nearEdge
+        ? Math.random() < 0.5
+          ? b.minX + Math.random() * spanX * 0.18
+          : b.maxX - Math.random() * spanX * 0.18
+        : rand(b.minX, b.maxX);
+      target = { x, y: rand(b.minY, b.maxY) };
+      if (Math.hypot(target.x - from.x, target.y - from.y) > 140) break;
+    }
+    return target;
   };
 
   const flip = () => {
     setFlipKey((k) => k + 1);
-    setMove({ duration: 0.5, ease: "easeOut" });
-    setPos({ x, y: -Math.min(maxLift, 36) });
-    setPose({ ...IDLE, eyes: "happy", mouth: "open", thrust: 2 });
-    settle(1000);
+    setMood("happy");
+    later("mood", 1100, () => setMood("idle"));
   };
 
-  const nextTip = () => {
-    const pool = [...tips.current.list, ...(ROUTE_LINES[pathname] ?? []), ...GENERIC];
-    return pick(pool);
+  const nextLine = (): CompanionLine => {
+    const p = pool.current;
+    if (p.queue.length === 0) {
+      // Ma'lumotga asoslangan (yoki AI) gaplar ko'proq, bo'lim va kundalik gaplar aralash
+      p.queue = shuffle([...p.lines, ...p.lines, ...(ROUTE_LINES[pathname] ?? []), ...shuffle(EVERYDAY).slice(0, 5)]);
+    }
+    return p.queue.pop() ?? pick(EVERYDAY);
   };
 
-  const loadTips = useEffectEvent(() => {
-    if (Date.now() - tips.current.at < TIPS_TTL) return;
-    tips.current.at = Date.now();
-    getRobotTips()
-      .then((list) => (tips.current.list = list))
-      .catch(() => {});
+  const fallAsleep = (b: Bounds) => {
+    const at = currentPos();
+    if (!at) return;
+    life.current.asleep = true;
+    window.clearTimeout(timers.current.settle);
+    setMove({ duration: 2, ease: "easeInOut" });
+    setPos({ x: at.x, y: b.maxY });
+    setLean(0);
+    setThrust(0);
+    setBubble(null);
+    setTalking(false);
+    setMood("sleepy");
+  };
+
+  const wake = () => {
+    const now = Date.now();
+    life.current.asleep = false;
+    life.current.holdUntil = now + 3000;
+    setThrust(1);
+    setMove({ duration: 0.8, ease: "easeOut" });
+    setPos((p) => (p ? { x: p.x, y: p.y - 30 } : p));
+    say(pick(REACTIONS.wake), 3400);
+  };
+
+  // ---- Server gaplari (AI kaliti bo'lsa — Claude yozgani) ----
+  const loadLines = useEffectEvent(async () => {
+    const p = pool.current;
+    if (Date.now() - p.at < LINES_TTL) return;
+    p.at = Date.now();
+    try {
+      const result = await getCompanionLines();
+      p.lines = result.lines;
+      p.queue = [];
+      // AI yangi gaplarni fonda yozyapti — bir daqiqadan keyin qayta so'raymiz
+      if (result.pending) {
+        window.setTimeout(() => {
+          p.at = 0;
+          void loadLines();
+        }, 60_000);
+      }
+    } catch {
+      p.at = Date.now() - LINES_TTL + 5 * 60_000;
+    }
   });
 
-  // ---- Asosiy sikl: har safar keyingi harakatni tasodifiy tanlaydi ----
+  // ---- Asosiy sikl: har safar keyingi harakatni tanlaydi ----
   const step = useEffectEvent((): number => {
     const now = Date.now();
-    if (document.hidden || asleep.current) return 3000;
-    if (holdUntil.current > now) return holdUntil.current - now + 200;
+    const s = life.current;
+    if (!pos || document.hidden || s.asleep || drag.current) return 2500;
+    if (s.holdUntil > now) return s.holdUntil - now + 200;
+    const b = readBounds(w, h);
 
-    if (now - lastActivity.current > SLEEP_AFTER) {
-      asleep.current = true;
-      window.clearTimeout(timers.current.settle);
-      setMove({ duration: 1.6, ease: "easeInOut" });
-      setPos({ x, y: 0 });
-      setLean(0);
-      setFacing(1);
-      setPose({ ...IDLE, eyes: "closed", thrust: 0, sleeping: true });
-      setBubble(null);
+    if (now - s.lastActivity > SLEEP_AFTER) {
+      fallAsleep(b);
       return 3000;
     }
-
-    if (now - lastTalk.current > TALK_EVERY + rand(0, 20_000)) {
-      wave(nextTip());
-      return 4200;
+    if (now - s.lastTalk > TALK_EVERY + rand(0, 25_000)) {
+      say(nextLine());
+      if (Math.random() < 0.3) wave();
+      s.holdUntil = now + 4500;
+      return 4700;
+    }
+    // Foydalanuvchi qo'ygan joyda turibdi — faqat atrofga qaraydi
+    if (s.restUntil > now) {
+      if (Math.random() < 0.4) setFacing((f) => (f === 1 ? -1 : 1));
+      return rand(3000, 5000);
     }
 
     const r = Math.random();
-    if (r < 0.45) {
-      // Kamida ekranning chorak qismi narigi tomonga uchadi
-      let target = rand(EDGE, maxX);
-      if (Math.abs(target - x) < width / 4) target = x > width / 2 ? rand(EDGE, width / 3) : rand((width * 2) / 3 - size, maxX);
-      return flyTo(clamp(target, EDGE, maxX), -rand(8, maxLift), false) + rand(800, 2400);
+    if (r < 0.5) return flyTo(pickTarget(b), false) + rand(1500, 4000);
+    if (r < 0.62) {
+      if (Math.random() < 0.4) say(pick(REACTIONS.dash), 1800);
+      return flyTo(pickTarget(b), true) + rand(900, 2000);
     }
-    if (r < 0.6) {
-      const target = x > width / 2 ? rand(EDGE, width * 0.35) : rand(width * 0.65 - size, maxX);
-      if (Math.random() < 0.35) say("Vuuush! 💨", 1600);
-      return flyTo(clamp(target, EDGE, maxX), -rand(4, 14), true) + rand(600, 1600);
-    }
-    if (r < 0.8) {
-      // Joyida suzib turadi, ba'zan orqasiga o'giriladi
+    if (r < 0.82) {
       if (Math.random() < 0.5) setFacing((f) => (f === 1 ? -1 : 1));
-      setMove({ duration: 1.4, ease: "easeInOut" });
-      setPos({ x, y: -rand(6, maxLift * 0.6) });
-      setPose(IDLE);
       return rand(2500, 5000);
     }
     if (r < 0.9) {
       flip();
-      if (Math.random() < 0.3) say("Hop! 🤸", 1500);
       return 1800;
     }
-    wave(nextTip());
-    return 4200;
+    setMood(pick(["think", "wink", "happy", "shy"] as const));
+    later("mood", 2600, () => setMood("idle"));
+    return 3000;
   });
 
   useEffect(() => {
     if (!mounted || !enabled || reduced) return;
-    lastActivity.current = Date.now();
     let timer = window.setTimeout(function loop() {
       timer = window.setTimeout(loop, step());
-    }, 2600);
+    }, 3000);
     return () => window.clearTimeout(timer);
   }, [mounted, enabled, reduced]);
 
-  // ---- Birinchi chiqish: pastdan ko'tarilib salom beradi ----
-  const greet = useEffectEvent(() => {
-    loadTips();
-    lastActivity.current = Date.now();
-    setPose({ ...IDLE, eyes: "happy", mouth: "open", waving: true });
-    say(greeting(), 4500);
-    settle(2600);
+  // ---- Paydo bo'lish: pastki o'ng burchakdan, vaqtga mos salom ----
+  const appear = useEffectEvent(() => {
+    const b = readBounds(w, h);
+    life.current.lastActivity = Date.now();
+    setPos({ x: b.maxX, y: b.maxY });
+    void loadLines();
+    later("greet", 900, () => {
+      wave();
+      say(greeting(), 5000);
+    });
   });
   useEffect(() => {
     if (!mounted || !enabled) return;
-    const timer = window.setTimeout(greet, 900);
-    return () => window.clearTimeout(timer);
+    appear();
+    const refresh = window.setInterval(() => void loadLines(), 5 * 60_000);
+    return () => window.clearInterval(refresh);
   }, [mounted, enabled]);
 
-  // ---- Sahifa almashganda — o'sha bo'limga mos gap ----
+  // Oyna o'lchami o'zgarsa — chegaradan chiqib ketmasin
+  const keepInside = useEffectEvent(() => {
+    const b = readBounds(w, h);
+    setMove({ duration: 0.3, ease: "easeOut" });
+    setPos((p) => (p ? { x: clamp(p.x, b.minX, b.maxX), y: clamp(p.y, b.minY, b.maxY) } : p));
+  });
+  useEffect(() => {
+    if (viewport) keepInside();
+  }, [viewport]);
+
+  // ---- Bo'lim almashganda — o'sha bo'limga mos gap ----
   const firstPath = useRef(true);
   const onRoute = useEffectEvent(() => {
-    loadTips();
-    if (asleep.current || Math.random() > 0.7) return;
+    void loadLines();
+    if (life.current.asleep || drag.current || Math.random() > 0.7) return;
     const lines = ROUTE_LINES[pathname];
-    if (lines) wave(pick(lines));
+    if (lines) say(pick(lines));
   });
   useEffect(() => {
     if (firstPath.current) {
@@ -248,41 +313,83 @@ export function RobotCompanion() {
     return () => window.clearTimeout(timer);
   }, [pathname]);
 
+  // ---- Saytdagi voqealar: yozuv qo'shildi, katta xarajat... ----
+  const onRobotEvent = useEffectEvent((detail: RobotEventDetail) => {
+    const now = Date.now();
+    life.current.lastActivity = now;
+    life.current.holdUntil = now + 4000;
+    if (life.current.asleep) {
+      life.current.asleep = false;
+      setThrust(1);
+    }
+    const lines = detail.editing
+      ? REACTIONS.saved
+      : detail.kind === "kirim"
+        ? REACTIONS.income
+        : detail.kind === "otkazma"
+          ? REACTIONS.transfer
+          : detail.big
+            ? REACTIONS.bigExpense
+            : REACTIONS.expense;
+    say(pick(lines));
+    if (detail.kind === "kirim" && !detail.editing) setFlipKey((k) => k + 1);
+  });
+  useEffect(() => {
+    if (!mounted || !enabled) return;
+    const handler = (event: Event) => onRobotEvent((event as CustomEvent<RobotEventDetail>).detail);
+    window.addEventListener(ROBOT_EVENT, handler);
+    return () => window.removeEventListener(ROBOT_EVENT, handler);
+  }, [mounted, enabled]);
+
+  // ---- Sahifaga qaytilganda — "sog'indim" ----
+  const onVisibility = useEffectEvent(() => {
+    const s = life.current;
+    if (document.hidden) {
+      s.hiddenAt = Date.now();
+      return;
+    }
+    if (s.hiddenAt && Date.now() - s.hiddenAt > MISSED_AFTER) {
+      s.lastActivity = Date.now();
+      if (s.asleep) wake();
+      else say(pick(REACTIONS.comeBack));
+    }
+    void loadLines();
+  });
+  useEffect(() => {
+    if (!mounted || !enabled) return;
+    const handler = () => onVisibility();
+    document.addEventListener("visibilitychange", handler);
+    return () => document.removeEventListener("visibilitychange", handler);
+  }, [mounted, enabled]);
+
   // ---- Faollik: uyg'onish va sichqoncha yaqinlashganda salom ----
   const onActivity = useEffectEvent((event: Event) => {
     const now = Date.now();
-    lastActivity.current = now;
-    if (asleep.current) {
-      asleep.current = false;
-      setPose({ ...IDLE, eyes: "happy", mouth: "open" });
-      setMove({ duration: 0.8, ease: "easeOut" });
-      setPos({ x, y: -Math.min(20, maxLift) });
-      say("Uyg'ondim! ☀️", 2500);
-      holdUntil.current = now + 2500;
+    const s = life.current;
+    s.lastActivity = now;
+    if (s.asleep) {
+      wake();
       return;
     }
-    if (reduced || event.type !== "pointermove" || now - lastNear.current < 12_000) return;
-    const rect = robotRef.current?.getBoundingClientRect();
+    if (reduced || !desktop || event.type !== "pointermove" || drag.current || now - s.lastNear < 25_000) return;
+    const rect = boxRef.current?.getBoundingClientRect();
     if (!rect) return;
     const { clientX, clientY } = event as PointerEvent;
     const dx = clientX - (rect.left + rect.width / 2);
     const dy = clientY - (rect.top + rect.height / 2);
-    if (Math.hypot(dx, dy) > 150) return;
+    if (Math.hypot(dx, dy) > 130) return;
 
-    // Ostidagi tugmani to'sib qolmaslik uchun bir chetga suriladi, keyin sichqoncha tomonga qarab salom beradi.
-    // Keyingi 12 soniya qochmaydi — shunda uni bemalol bosish mumkin.
-    lastNear.current = now;
-    holdUntil.current = now + 3500;
-    const here = clamp(rect.left, EDGE, maxX);
-    let away = here + (dx >= 0 ? -DODGE : DODGE);
-    if (away < EDGE || away > maxX) away = here + (dx >= 0 ? DODGE : -DODGE);
-    setMove({ duration: 0.45, ease: "easeOut" });
-    setPos({ x: clamp(away, EDGE, maxX), y });
+    // To'xtab, sichqoncha tomonga qarab salom beradi
+    s.lastNear = now;
+    s.holdUntil = now + 3200;
+    window.clearTimeout(timers.current.settle);
+    setMove({ duration: 0.3, ease: "easeOut" });
+    setPos({ x: rect.left, y: rect.top });
     setLean(0);
+    setThrust(1);
     setFacing(dx >= 0 ? 1 : -1);
-    setPose({ ...IDLE, eyes: "happy", mouth: "open", waving: true });
-    say(pick(NEAR), 3000);
-    settle(2600);
+    wave();
+    say(pick(REACTIONS.near), 3200);
   });
   useEffect(() => {
     if (!mounted || !enabled) return;
@@ -312,27 +419,107 @@ export function RobotCompanion() {
 
   useEffect(() => {
     const t = timers.current;
-    return () => {
-      window.clearTimeout(t.bubble);
-      window.clearTimeout(t.settle);
-    };
+    return () => Object.values(t).forEach((id) => window.clearTimeout(id));
   }, []);
 
-  if (!mounted || !enabled || width === 0) return null;
+  // ---- Sudrab olib yurish ----
+  const startDrag = () => {
+    const s = life.current;
+    s.lastActivity = Date.now();
+    if (s.asleep) s.asleep = false;
+    window.clearTimeout(timers.current.settle);
+    setDragging(true);
+    setWaving(false);
+    say(pick(REACTIONS.dragStart), 2200);
+    // Avval hayron, keyin kulib yuboradi
+    later("giggle", 800, () => {
+      if (drag.current) setMood("happy");
+    });
+  };
 
-  const onRight = x + size / 2 > width / 2;
+  const endDrag = () => {
+    const now = Date.now();
+    const b = readBounds(w, h);
+    setDragging(false);
+    setLean(0);
+    setThrust(1);
+    setMove({ duration: 0.4, ease: "easeOut" });
+    // Yuqori panel yoki pastki menyu ustida qolmasin
+    setPos((p) => (p ? { x: clamp(p.x, b.minX, b.maxX), y: clamp(p.y, b.minY, b.maxY) } : p));
+    life.current.restUntil = now + REST_AFTER_DROP;
+    life.current.holdUntil = now + 3000;
+    say(pick(REACTIONS.drop), 3600);
+  };
+
+  const onPointerDown = (event: React.PointerEvent<HTMLButtonElement>) => {
+    if (event.button !== 0) return;
+    const rect = boxRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    event.currentTarget.setPointerCapture(event.pointerId);
+    drag.current = {
+      id: event.pointerId,
+      sx: event.clientX,
+      sy: event.clientY,
+      ox: event.clientX - rect.left,
+      oy: event.clientY - rect.top,
+      lastX: event.clientX,
+      moved: false,
+    };
+  };
+
+  const onPointerMove = (event: React.PointerEvent<HTMLButtonElement>) => {
+    const d = drag.current;
+    if (!d || d.id !== event.pointerId) return;
+    if (!d.moved) {
+      if (Math.hypot(event.clientX - d.sx, event.clientY - d.sy) < 6) return;
+      d.moved = true;
+      startDrag();
+    }
+    const vw = document.documentElement.clientWidth;
+    setMove({ duration: 0 });
+    setPos({ x: clamp(event.clientX - d.ox, 0, vw - w), y: clamp(event.clientY - d.oy, 0, window.innerHeight - h) });
+    // Tez sudralsa — oyoqlari osilib, u yoqdan-bu yoqqa chayqaladi
+    setLean(clamp((event.clientX - d.lastX) * 2, -22, 22));
+    d.lastX = event.clientX;
+  };
+
+  const onPointerUp = (event: React.PointerEvent<HTMLButtonElement>) => {
+    const d = drag.current;
+    if (!d || d.id !== event.pointerId) return;
+    drag.current = null;
+    if (d.moved) {
+      justDragged.current = true;
+      endDrag();
+    }
+  };
+
+  const onClick = () => {
+    // Sudrab qo'yilgandan keyingi "click" chatni ochmaydi
+    if (justDragged.current) {
+      justDragged.current = false;
+      return;
+    }
+    const now = Date.now();
+    life.current.lastActivity = now;
+    life.current.holdUntil = now + 2600;
+    if (life.current.asleep) {
+      life.current.asleep = false;
+      setThrust(1);
+    }
+    say(pick(REACTIONS.click), 2600);
+    openAssistant();
+  };
+
+  if (!mounted || !enabled || !pos) return null;
 
   return (
-    <div
-      className="pointer-events-none fixed inset-x-0 bottom-[calc(4rem+env(safe-area-inset-bottom)+0.5rem)] z-30 h-0 lg:bottom-4 print:hidden"
-      data-robot-layer
-    >
+    <div className="pointer-events-none fixed inset-0 z-40 print:hidden" data-robot-layer>
       <m.div
-        ref={robotRef}
-        className="absolute bottom-0 left-0"
-        style={{ width: size }}
-        initial={{ x, y: 60, opacity: 0 }}
-        animate={{ x, y, opacity: 1 }}
+        ref={boxRef}
+        className="absolute top-0 left-0"
+        style={{ width: w, height: h }}
+        initial={{ x: pos.x, y: pos.y + 40, opacity: 0 }}
+        animate={{ x: pos.x, y: pos.y, opacity: 1 }}
         transition={{ x: move, y: move, opacity: { duration: 0.4 } }}
       >
         <AnimatePresence>
@@ -340,13 +527,21 @@ export function RobotCompanion() {
             <m.p
               key={bubble.id}
               aria-hidden
-              initial={{ opacity: 0, scale: 0.6, y: 8 }}
+              initial={{ opacity: 0, scale: 0.6, y: bubble.below ? -8 : 8 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.85, transition: { duration: 0.15 } }}
               transition={SPRING}
               className={cn(
-                "absolute bottom-full mb-1.5 w-max max-w-[min(15rem,calc(100vw-2rem))] rounded-2xl border bg-card px-3 py-2 text-sm leading-snug font-medium text-card-foreground shadow-lg shadow-black/10",
-                onRight ? "right-0 origin-bottom-right rounded-br-md" : "left-0 origin-bottom-left rounded-bl-md",
+                "absolute w-max max-w-[min(16rem,calc(100vw-2rem))] rounded-2xl border bg-card px-3 py-2 text-sm leading-snug font-medium text-card-foreground shadow-lg shadow-black/10",
+                bubble.below ? "top-full mt-1.5" : "bottom-full mb-1.5",
+                bubble.right ? "right-0" : "left-0",
+                bubble.below
+                  ? bubble.right
+                    ? "origin-top-right rounded-tr-md"
+                    : "origin-top-left rounded-tl-md"
+                  : bubble.right
+                    ? "origin-bottom-right rounded-br-md"
+                    : "origin-bottom-left rounded-bl-md",
               )}
             >
               {bubble.text}
@@ -356,24 +551,30 @@ export function RobotCompanion() {
 
         <m.button
           type="button"
-          onClick={() => {
-            lastActivity.current = Date.now();
-            holdUntil.current = Date.now() + 2000;
-            flip();
-            say("Nima yordam kerak? 💬", 2500);
-            openAssistant();
-          }}
-          aria-label="Oydin — AI yordamchini ochish"
-          title="Oydin — AI yordamchi"
-          className="pointer-events-auto block w-full cursor-pointer rounded-full outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
-          animate={{ rotate: lean }}
-          whileHover={{ scale: 1.08 }}
-          whileTap={{ scale: 0.9 }}
-          transition={{ type: "spring", stiffness: 220, damping: 18 }}
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={onPointerUp}
+          onPointerCancel={onPointerUp}
+          onClick={onClick}
+          aria-label="Oydin — AI yordamchini ochish (sudrab boshqa joyga qo'yish mumkin)"
+          title="Oydin — bosing yoki sudrab boshqa joyga qo'ying"
+          className={cn(
+            "pointer-events-auto block size-full touch-none rounded-full outline-none select-none focus-visible:ring-3 focus-visible:ring-ring/50",
+            dragging ? "cursor-grabbing" : "cursor-grab",
+          )}
+          animate={{ rotate: lean, scale: dragging ? 1.08 : 1 }}
+          whileHover={{ scale: dragging ? 1.08 : 1.05 }}
+          transition={{ type: "spring", stiffness: 260, damping: 18 }}
         >
-          <m.div animate={{ scaleX: facing }} transition={{ duration: 0.25 }}>
-            <div key={flipKey} className={cn(flipKey > 0 && "robot-flip")}>
-              <Oydin {...pose} className="h-auto w-full drop-shadow-[0_6px_10px_rgb(0_0_0/0.15)]" />
+          <m.div className="size-full" animate={{ scaleX: facing }} transition={{ duration: 0.25 }}>
+            <div key={flipKey} className={cn("size-full", flipKey > 0 && "robot-flip")}>
+              <Oydin
+                mood={mood}
+                talking={talking}
+                waving={waving && !dragging}
+                thrust={dragging ? 0 : thrust}
+                className="size-full drop-shadow-[0_6px_10px_rgb(0_0_0/0.15)]"
+              />
             </div>
           </m.div>
         </m.button>
