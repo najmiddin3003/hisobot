@@ -277,7 +277,8 @@ export function Oydin({
   mood = "idle",
   talking = false,
   waving = false,
-  thrust = 1,
+  gait = "stand",
+  thrust = 0,
   headOnly = false,
   className,
 }: {
@@ -286,7 +287,9 @@ export function Oydin({
   talking?: boolean;
   /** O'ng qo'l bilan salom beradi */
   waving?: boolean;
-  /** Krossovkalar ostidagi nur: 0 — yo'q (qo'ngan yoki qo'lda), 1 — suzib turibdi, 2 — tez uchyapti */
+  /** Yurish: turibdi, qadam tashlab yuryapti yoki yuguryapti */
+  gait?: "stand" | "walk" | "run";
+  /** Krossovkalar ostidagi reaktiv nur (sakraganda): 0 — yo'q, 1 — kuchsiz, 2 — kuchli */
   thrust?: number;
   /** Faqat bosh (chat avatari uchun) */
   headOnly?: boolean;
@@ -304,6 +307,23 @@ export function Oydin({
 
   const arms = ARM_POSES[face.arms];
   const kicking = mood === "happy" || mood === "excited" || mood === "love";
+  const moving = gait !== "stand";
+  // Yurganda qo'llar oyoqlarga teskari silkinadi (faqat erkin tushib turganda)
+  const swing = moving && face.arms === "rest";
+  const legClass = (i: number) =>
+    gait === "walk"
+      ? i === 0
+        ? "robot-step-l"
+        : "robot-step-r"
+      : gait === "run"
+        ? i === 0
+          ? "robot-run-l"
+          : "robot-run-r"
+        : kicking
+          ? i === 0
+            ? "robot-kick-l"
+            : "robot-kick-r"
+          : undefined;
 
   return (
     <svg viewBox="20 6 120 194" aria-hidden className={cn("overflow-visible", className)}>
@@ -321,10 +341,11 @@ export function Oydin({
         </g>
       )}
 
-      <g className={cn(mood !== "sleepy" && "robot-bob")}>
+      {/* Turganda sekin nafas oladi, yurganda har qadamda sal sakraydi */}
+      <g className={cn(gait === "walk" ? "robot-walk-bob" : gait === "run" ? "robot-run-bob" : mood !== "sleepy" && "robot-breathe")}>
         {/* Oyoqlar va krossovkalar */}
         {[71, 89].map((x, i) => (
-          <g key={x} className={cn(kicking && (i === 0 ? "robot-kick-l" : "robot-kick-r"))} style={{ transformOrigin: `${x}px 160px` }}>
+          <g key={x} className={legClass(i)} style={{ transformOrigin: `${x}px 160px` }}>
             <path d={`M${x} 158V174`} stroke={INK} strokeWidth="7" strokeLinecap="round" />
             <rect x={x - 7.5} y="172" width="15" height="8.5" rx="4.2" fill="#fff" stroke={INK} strokeWidth="2" />
             <path d={`M${x - 5} 176.6l5-1.8`} stroke={CLAY} strokeWidth="1.8" strokeLinecap="round" />
@@ -359,11 +380,19 @@ export function Oydin({
         </g>
 
         {/* Qo'llar (bosh ustida — yonoqqa qo'yilganda ko'rinsin) */}
-        <Arm points={arms.l} />
+        <Arm
+          points={arms.l}
+          className={cn(swing && (gait === "run" ? "robot-run-arm-l" : "robot-swing-l"))}
+          origin="59px 118px"
+        />
         {waving ? (
           <Arm points={[SHOULDER_R, [115, 99]]} className="robot-wave" origin="101px 118px" />
         ) : (
-          <Arm points={arms.r} />
+          <Arm
+            points={arms.r}
+            className={cn(swing && (gait === "run" ? "robot-run-arm-r" : "robot-swing-r"))}
+            origin="101px 118px"
+          />
         )}
 
         {/* Hissiyot bezaklari */}

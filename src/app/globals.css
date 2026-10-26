@@ -496,6 +496,103 @@
   }
 }
 
+/* Oydin yurishi: oyoqlar navbat bilan qadam bosadi, qo'llar teskari silkinadi, tana har qadamda sakraydi */
+@keyframes robot-step {
+  0%,
+  100% {
+    transform: rotate(21deg);
+  }
+  50% {
+    transform: rotate(-21deg);
+  }
+}
+@keyframes robot-run {
+  0%,
+  100% {
+    transform: rotate(26deg);
+  }
+  50% {
+    transform: rotate(-26deg);
+  }
+}
+@keyframes robot-arm-swing {
+  0%,
+  100% {
+    transform: rotate(-12deg);
+  }
+  50% {
+    transform: rotate(12deg);
+  }
+}
+@keyframes robot-arm-run {
+  0%,
+  100% {
+    transform: rotate(-22deg);
+  }
+  50% {
+    transform: rotate(22deg);
+  }
+}
+@keyframes robot-stride-bob {
+  0%,
+  50%,
+  100% {
+    transform: translateY(0);
+  }
+  25%,
+  75% {
+    transform: translateY(-2.5px);
+  }
+}
+@keyframes robot-breathe {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-1.2px);
+  }
+}
+
+@utility robot-step-l {
+  animation: robot-step 0.6s ease-in-out infinite;
+}
+@utility robot-step-r {
+  animation: robot-step 0.6s ease-in-out infinite;
+  animation-delay: -0.3s;
+}
+@utility robot-run-l {
+  animation: robot-run 0.34s ease-in-out infinite;
+}
+@utility robot-run-r {
+  animation: robot-run 0.34s ease-in-out infinite;
+  animation-delay: -0.17s;
+}
+/* Chap qo'l o'ng oyoq bilan birga (teskari fazada) */
+@utility robot-swing-l {
+  animation: robot-arm-swing 0.6s ease-in-out infinite;
+  animation-delay: -0.3s;
+}
+@utility robot-swing-r {
+  animation: robot-arm-swing 0.6s ease-in-out infinite;
+}
+@utility robot-run-arm-l {
+  animation: robot-arm-run 0.34s ease-in-out infinite;
+  animation-delay: -0.17s;
+}
+@utility robot-run-arm-r {
+  animation: robot-arm-run 0.34s ease-in-out infinite;
+}
+@utility robot-walk-bob {
+  animation: robot-stride-bob 0.6s ease-in-out infinite;
+}
+@utility robot-run-bob {
+  animation: robot-stride-bob 0.34s ease-in-out infinite;
+}
+@utility robot-breathe {
+  animation: robot-breathe 3.2s ease-in-out infinite;
+}
+
 @utility robot-beat {
   transform-box: fill-box;
   transform-origin: center;
@@ -554,7 +651,18 @@
   .robot-tear,
   .robot-float-heart,
   .robot-twinkle,
-  .robot-talk-a {
+  .robot-talk-a,
+  .robot-step-l,
+  .robot-step-r,
+  .robot-run-l,
+  .robot-run-r,
+  .robot-swing-l,
+  .robot-swing-r,
+  .robot-run-arm-l,
+  .robot-run-arm-r,
+  .robot-walk-bob,
+  .robot-run-bob,
+  .robot-breathe {
     animation: none !important;
   }
   .robot-talk-b {

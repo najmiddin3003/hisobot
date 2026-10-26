@@ -80,7 +80,8 @@ export function RobotCompanion() {
   const [mood, setMood] = useState<CompanionMood>("idle");
   const [talking, setTalking] = useState(false);
   const [waving, setWaving] = useState(false);
-  const [thrust, setThrust] = useState(1);
+  const [thrust, setThrust] = useState(0);
+  const [gait, setGait] = useState<"stand" | "walk" | "run">("stand");
   const [flipKey, setFlipKey] = useState(0);
   const [bubble, setBubble] = useState<Bubble | null>(null);
   const [dragging, setDragging] = useState(false);
@@ -122,44 +123,47 @@ export function RobotCompanion() {
     later("wave", ms, () => setWaving(false));
   };
 
-  const flyTo = (target: Pos, fast: boolean) => {
+  /** Qadam tashlab boradi (bir tekis tezlikda); run — yuguradi */
+  const walkTo = (target: Pos, run: boolean) => {
     const from = currentPos() ?? target;
     const distance = Math.hypot(target.x - from.x, target.y - from.y);
-    const duration = fast ? clamp(distance / 650, 0.45, 1.3) : clamp(distance / 170, 1.2, 5);
+    const speed = (run ? 230 : 80) * (desktop ? 1 : 0.75);
+    const duration = clamp(distance / speed, 0.6, 12);
     const dir = target.x >= from.x ? 1 : -1;
     setFacing(dir);
-    setMove({ duration, ease: fast ? [0.7, 0, 0.2, 1] : "easeInOut" });
+    setMove({ duration, ease: "linear" });
     setPos(target);
-    setLean(dir * (fast ? 14 : 6));
-    setThrust(fast ? 2 : 1.4);
+    setGait(run ? "run" : "walk");
+    setLean(dir * (run ? 8 : 2));
     later("settle", duration * 1000, () => {
+      setGait("stand");
       setLean(0);
-      setThrust(1);
     });
     return duration * 1000;
   };
 
-  /** Ko'pincha ekran chetlariga yaqin (kontentni kamroq to'sadi), ba'zan istalgan joyga */
-  const pickTarget = (b: Bounds): Pos => {
+  /** Yaqin-atrofga (ko'pincha yon tomonga) — ekran chetlarida ko'proq yuradi, kontentni kamroq to'sadi */
+  const pickTarget = (b: Bounds, far = false): Pos => {
     const from = currentPos() ?? { x: b.maxX, y: b.maxY };
-    const spanX = b.maxX - b.minX;
     let target = from;
-    for (let i = 0; i < 6; i++) {
-      const nearEdge = Math.random() < 0.6;
-      const x = nearEdge
-        ? Math.random() < 0.5
-          ? b.minX + Math.random() * spanX * 0.18
-          : b.maxX - Math.random() * spanX * 0.18
-        : rand(b.minX, b.maxX);
-      target = { x, y: rand(b.minY, b.maxY) };
-      if (Math.hypot(target.x - from.x, target.y - from.y) > 140) break;
+    for (let i = 0; i < 8; i++) {
+      const length = far ? rand(320, 700) : rand(110, 380);
+      // Asosan gorizontal yuradi, yuqori-pastga kamroq
+      const angle = rand(-0.6, 0.6) + (Math.random() < 0.5 ? 0 : Math.PI);
+      const x = clamp(from.x + Math.cos(angle) * length, b.minX, b.maxX);
+      const y = clamp(from.y + Math.sin(angle) * length * 0.7, b.minY, b.maxY);
+      target = { x, y };
+      if (Math.hypot(x - from.x, y - from.y) > 90) break;
     }
     return target;
   };
 
+  /** Joyida sakrab salto qiladi — krossovkalardagi reaktiv nur yonadi */
   const flip = () => {
     setFlipKey((k) => k + 1);
+    setThrust(2);
     setMood("happy");
+    later("jet", 900, () => setThrust(0));
     later("mood", 1100, () => setMood("idle"));
   };
 
@@ -172,13 +176,15 @@ export function RobotCompanion() {
     return p.queue.pop() ?? pick(EVERYDAY);
   };
 
-  const fallAsleep = (b: Bounds) => {
+  /** Turgan joyida uxlab qoladi */
+  const fallAsleep = () => {
     const at = currentPos();
     if (!at) return;
     life.current.asleep = true;
     window.clearTimeout(timers.current.settle);
-    setMove({ duration: 2, ease: "easeInOut" });
-    setPos({ x: at.x, y: b.maxY });
+    setMove({ duration: 0.2, ease: "easeOut" });
+    setPos(at);
+    setGait("stand");
     setLean(0);
     setThrust(0);
     setBubble(null);
@@ -190,9 +196,6 @@ export function RobotCompanion() {
     const now = Date.now();
     life.current.asleep = false;
     life.current.holdUntil = now + 3000;
-    setThrust(1);
-    setMove({ duration: 0.8, ease: "easeOut" });
-    setPos((p) => (p ? { x: p.x, y: p.y - 30 } : p));
     say(pick(REACTIONS.wake), 3400);
   };
 
@@ -226,7 +229,7 @@ export function RobotCompanion() {
     const b = readBounds(w, h);
 
     if (now - s.lastActivity > SLEEP_AFTER) {
-      fallAsleep(b);
+      fallAsleep();
       return 3000;
     }
     if (now - s.lastTalk > TALK_EVERY + rand(0, 25_000)) {
@@ -242,10 +245,10 @@ export function RobotCompanion() {
     }
 
     const r = Math.random();
-    if (r < 0.5) return flyTo(pickTarget(b), false) + rand(1500, 4000);
+    if (r < 0.55) return walkTo(pickTarget(b), false) + rand(1500, 4000);
     if (r < 0.62) {
       if (Math.random() < 0.4) say(pick(REACTIONS.dash), 1800);
-      return flyTo(pickTarget(b), true) + rand(900, 2000);
+      return walkTo(pickTarget(b, true), true) + rand(900, 2000);
     }
     if (r < 0.82) {
       if (Math.random() < 0.5) setFacing((f) => (f === 1 ? -1 : 1));
@@ -320,7 +323,6 @@ export function RobotCompanion() {
     life.current.holdUntil = now + 4000;
     if (life.current.asleep) {
       life.current.asleep = false;
-      setThrust(1);
     }
     const lines = detail.editing
       ? REACTIONS.saved
@@ -385,8 +387,8 @@ export function RobotCompanion() {
     window.clearTimeout(timers.current.settle);
     setMove({ duration: 0.3, ease: "easeOut" });
     setPos({ x: rect.left, y: rect.top });
+    setGait("stand");
     setLean(0);
-    setThrust(1);
     setFacing(dx >= 0 ? 1 : -1);
     wave();
     say(pick(REACTIONS.near), 3200);
@@ -428,6 +430,7 @@ export function RobotCompanion() {
     s.lastActivity = Date.now();
     if (s.asleep) s.asleep = false;
     window.clearTimeout(timers.current.settle);
+    setGait("stand");
     setDragging(true);
     setWaving(false);
     say(pick(REACTIONS.dragStart), 2200);
@@ -441,8 +444,8 @@ export function RobotCompanion() {
     const now = Date.now();
     const b = readBounds(w, h);
     setDragging(false);
+    setGait("stand");
     setLean(0);
-    setThrust(1);
     setMove({ duration: 0.4, ease: "easeOut" });
     // Yuqori panel yoki pastki menyu ustida qolmasin
     setPos((p) => (p ? { x: clamp(p.x, b.minX, b.maxX), y: clamp(p.y, b.minY, b.maxY) } : p));
@@ -504,7 +507,6 @@ export function RobotCompanion() {
     life.current.holdUntil = now + 2600;
     if (life.current.asleep) {
       life.current.asleep = false;
-      setThrust(1);
     }
     say(pick(REACTIONS.click), 2600);
     openAssistant();
@@ -572,6 +574,7 @@ export function RobotCompanion() {
                 mood={mood}
                 talking={talking}
                 waving={waving && !dragging}
+                gait={dragging ? "stand" : gait}
                 thrust={dragging ? 0 : thrust}
                 className="size-full drop-shadow-[0_6px_10px_rgb(0_0_0/0.15)]"
               />
