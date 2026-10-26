@@ -9,7 +9,7 @@ const rateSchema = new Schema(
     /** Toshkent vaqti bo'yicha kun, "YYYY-MM-DD" */
     day: { type: String, required: true },
     rate: { type: Number, required: true, min: 0 },
-    /** Qayerdan olingani: cbu, coingecko, binance */
+    /** Qayerdan olingani: cbu, er-api (zaxira), coingecko, binance, usd (USDT ≈ dollar) */
     source: { type: String, required: true },
     fetchedAt: { type: Date, required: true },
   },

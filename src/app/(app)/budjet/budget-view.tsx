@@ -301,4 +301,10 @@ function HistoryCard({ history, className }: { history: MonthHistory[]; classNam
   );
 }
 
-const RATE_SOURCES: Record<string, string> = { cbu: "Markaziy bank", coingecko: "CoinGecko", binance: "Binance" };
+const RATE_SOURCES: Record<string, string> = {
+  cbu: "Markaziy bank",
+  "er-api": "ExchangeRate-API",
+  coingecko: "CoinGecko",
+  binance: "Binance",
+  usd: "dollar kursi bo'yicha",
+};

@@ -43,6 +43,33 @@ async function fetchCbu(): Promise<Fetched> {
   return out;
 }
 
+/** Zaxira: open.er-api.com (kalitsiz, butun dunyodan ochiladi) — dollar va yevro so'mda */
+async function fetchErApi(): Promise<Fetched> {
+  const data = await getJson<{ result: string; rates: Record<string, number> }>("https://open.er-api.com/v6/latest/USD");
+  const uzs = data.rates?.UZS;
+  const eur = data.rates?.EUR;
+  const out: Fetched = {};
+  if (data.result === "success" && uzs > 0) {
+    out.USD = { rate: uzs, source: "er-api" };
+    if (eur > 0) out.EUR = { rate: uzs / eur, source: "er-api" };
+  }
+  return out;
+}
+
+/**
+ * Dollar va yevro: Markaziy bank (rasmiy) va zaxira manba bir vaqtda so'raladi.
+ * cbu.uz chet eldagi serverlardan (Vercel — Germaniya) ochilmasligi mumkin — shunda zaxira kursi olinadi.
+ */
+async function fetchFiat(): Promise<Fetched> {
+  const [cbu, backup] = await Promise.allSettled([fetchCbu(), fetchErApi()]);
+  if (cbu.status === "rejected") console.error("CBU kurslari olinmadi:", cbu.reason);
+  if (backup.status === "rejected") console.error("Zaxira kurslar olinmadi:", backup.reason);
+  return {
+    ...(backup.status === "fulfilled" ? backup.value : {}),
+    ...(cbu.status === "fulfilled" ? cbu.value : {}),
+  };
+}
+
 /** Kriptovalyutalarning dollardagi narxi */
 async function fetchCryptoUsd(): Promise<{ BTC?: number; USDT?: number; source: string }> {
   try {
@@ -99,13 +126,7 @@ async function refreshFromSources(latest: Latest, force: boolean): Promise<Rates
   const stale = (c: Currency) => isStale(latest, c, now, force);
 
   const fetched: Fetched = {};
-  if (stale("USD") || stale("EUR")) {
-    try {
-      Object.assign(fetched, await fetchCbu());
-    } catch (error) {
-      console.error("CBU kurslari olinmadi:", error);
-    }
-  }
+  if (stale("USD") || stale("EUR")) Object.assign(fetched, await fetchFiat());
   if (stale("BTC") || stale("USDT")) {
     const usd = fetched.USD?.rate ?? latest.get("USD")?.rate;
     if (usd) {
@@ -116,6 +137,8 @@ async function refreshFromSources(latest: Latest, force: boolean): Promise<Rates
       } catch (error) {
         console.error("Kripto narxlari olinmadi:", error);
       }
+      // USDT dollarga bog'langan — kripto manbalar javob bermasa, dollar kursi olinadi
+      if (!fetched.USDT && !latest.get("USDT")) fetched.USDT = { rate: usd, source: "usd" };
     }
   }
 
