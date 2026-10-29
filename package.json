@@ -12,6 +12,7 @@
     "gen:secret": "tsx scripts/gen-secret.ts",
     "reset-password": "tsx scripts/reset-password.ts",
     "reset-2fa": "tsx scripts/reset-2fa.ts",
+    "reset-money": "tsx scripts/reset-money.ts",
     "bot:dev": "tsx --conditions=react-server scripts/bot-dev.ts",
     "bot:webhook": "tsx scripts/bot-webhook.ts",
     "check-env": "tsx scripts/check-env.ts"

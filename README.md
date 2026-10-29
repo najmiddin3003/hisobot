@@ -33,6 +33,7 @@ Kirim-chiqim, budjet, qarzlar va kreditlarni nazorat qilish tizimi. Next.js (App
 | `npm run setup` | Birinchi sozlash (qayta ishga tushirish xavfsiz) |
 | `npm run reset-password` | Parolni unutganda: yangi parol, blokni olib tashlash, barcha seanslarni yopish |
 | `npm run reset-2fa` | Telefon va zaxira kodlar yo'qolganda: Google Authenticator'ni qayta ulash |
+| `npm run reset-money` | Pul yozuvlarini nolga tushirish: kirim-chiqim, o'tkazma, qarzlarni o'chiradi, hamyon qoldiqlari va maqsadlarni 0 qiladi (tasdiq so'raydi) |
 | `npm run bot:dev` | Telegram botni kompyuterda ishga tushirish (polling) |
 | `npm run bot:webhook` | Vercel'dagi saytga bot webhook'ini ulash |
 | `npm run gen:secret` | Yangi maxfiy kalit yaratish |
